@@ -1,0 +1,77 @@
+{{- if include "sentinel.anyAgentEnabled" . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinel-executor
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ include "sentinel.standardLabels" . | indent 4 }}
+    app.kubernetes.io/name: sentinel-executor
+    app.kubernetes.io/part-of: sentinel
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app.kubernetes.io/name: sentinel-executor}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/common/config.yaml") . | sha256sum }}
+      labels:
+{{ include "sentinel.standardLabels" . | indent 8 }}
+        app.kubernetes.io/name: sentinel-executor
+        app.kubernetes.io/part-of: sentinel
+    spec:
+      serviceAccountName: sentinel-executor
+      terminationGracePeriodSeconds: {{ .Values.executor.actionTimeoutSeconds | int }}
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 65532
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+      - name: executor
+        image: {{ .Values.images.executor.repository }}:{{ .Values.images.executor.tag | default .Chart.AppVersion }}
+        imagePullPolicy: Always
+        command: [python, -m, sentinel.executor.worker]
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "import os, sys, time; sys.exit(time.time() - os.path.getmtime('/tmp/sentinel-worker-heartbeat') > {{ .Values.executor.actionTimeoutSeconds | int }})"
+          initialDelaySeconds: 60
+          periodSeconds: 60
+          failureThreshold: 3
+        env:
+        - {name: HOME, value: /home/sentinel}
+        - {name: KUBECONFIG, value: /home/sentinel/.kube/config}
+        - {name: SENTINEL_KAFKA_USERNAME, value: {{ .Values.kafka.users.executor | quote }}}
+        - name: SENTINEL_KAFKA_PASSWORD
+          valueFrom: {secretKeyRef: {name: {{ .Values.secrets.app }}, key: KAFKA_EXECUTOR_PASSWORD}}
+        - name: SENTINEL_GITHUB_APP_ID
+          valueFrom: {secretKeyRef: {name: {{ .Values.secrets.app }}, key: GITHUB_APP_ID}}
+        - name: SENTINEL_GITHUB_INSTALLATION_ID
+          valueFrom: {secretKeyRef: {name: {{ .Values.secrets.app }}, key: GITHUB_INSTALLATION_ID}}
+        - name: SENTINEL_GITHUB_APP_PRIVATE_KEY
+          valueFrom: {secretKeyRef: {name: {{ .Values.secrets.app }}, key: GITHUB_APP_PRIVATE_KEY}}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities: {drop: [ALL]}
+        resources:
+          requests: {cpu: 20m, memory: 128Mi}
+          limits: {memory: 512Mi}
+        volumeMounts:
+        - {name: config, mountPath: /etc/sentinel, readOnly: true}
+        - {name: home, mountPath: /home/sentinel}
+        - {name: tmp, mountPath: /tmp}
+        - {name: kubeconfig, mountPath: /home/sentinel/.kube, readOnly: true}
+      volumes:
+      - {name: config, configMap: {name: sentinel-config}}
+      - {name: home, emptyDir: {}}
+      - {name: tmp, emptyDir: {}}
+      - name: kubeconfig
+        configMap:
+          name: sentinel-executor-kubeconfig
+          items: [{key: config, path: config}]
+{{- end }}

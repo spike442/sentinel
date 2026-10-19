@@ -1,0 +1,7 @@
+streaming:
+  consumer_group: sentinel-spark-outcomes
+  checkpoint: /data/checkpoint-workflows
+  max_offsets_per_trigger: 25
+  trigger_interval: 30 seconds
+  starting_offsets: earliest
+  raw_prefix: raw/workflows

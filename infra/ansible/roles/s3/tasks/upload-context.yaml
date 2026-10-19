@@ -1,0 +1,24 @@
+---
+- name: Create the bucket
+  ansible.builtin.command:
+    argv: [aws, --endpoint-url, "{{ endpoint }}", s3api, create-bucket, --bucket, "{{ bucket }}"]
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ secret_access_key }}"
+    AWS_DEFAULT_REGION: "{{ region }}"
+    AWS_EC2_METADATA_DISABLED: "true"
+  changed_when: true
+
+- name: Upload each directory
+  ansible.builtin.command:
+    argv: [aws, --endpoint-url, "{{ endpoint }}", s3, cp, "{{ item.source }}/", "s3://{{ bucket }}/{{ item.prefix }}/",
+           --recursive, --no-progress, --exclude, "{{ exclude }}"]
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ secret_access_key }}"
+    AWS_DEFAULT_REGION: "{{ region }}"
+    AWS_EC2_METADATA_DISABLED: "true"
+  loop: "{{ uploads }}"
+  loop_control:
+    label: "{{ item.source | basename }} -> s3://{{ bucket }}/{{ item.prefix }}/"
+  changed_when: true

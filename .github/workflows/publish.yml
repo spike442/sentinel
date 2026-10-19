@@ -1,0 +1,79 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version part to increment after this release for the project and every released package
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+concurrency:
+  group: sentinel-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sentinel:
+    name: Publish
+    uses: ./.github/workflows/sentinel.yml
+    with:
+      publish: true
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+  release:
+    name: Tag and bump version
+    needs: sentinel
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          version: "0.12.20"
+          python-version: "3.12"
+      - name: Tag released commit
+        run: git push --force origin "HEAD:refs/tags/sentinel-$(uv version --short --directory sentinel)"
+      - name: Check out latest branch tip
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.ref_name }}
+      - id: bump
+        name: Bump project and package versions
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          uv version --bump "$BUMP" --frozen --directory sentinel
+          version="$(uv version --short --directory sentinel)"
+          for member in $(yq -p toml -o yaml '.tool.uv.workspace.members[]' sentinel/pyproject.toml); do
+            uv version "$version" --frozen --directory "sentinel/$member"
+          done
+          uv lock --directory sentinel
+          VERSION="$version" yq -i '.version = strenv(VERSION) | .appVersion = strenv(VERSION)' infra/chart/sentinel/Chart.yaml
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Commit next version
+        uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7.2.0
+        with:
+          commit_message: "chore(release): prepare sentinel ${{ steps.bump.outputs.version }}"
+          branch: ${{ github.ref_name }}
+      - id: homelab-token
+        name: Create Homelab token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.BOT_CLIENT_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: homelab
+      - name: Notify Homelab Renovate
+        env:
+          GH_TOKEN: ${{ steps.homelab-token.outputs.token }}
+        run: gh api "repos/${{ github.repository_owner }}/homelab/dispatches" --field event_type=sentinel-release

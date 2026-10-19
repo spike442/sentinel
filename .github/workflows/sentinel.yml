@@ -1,0 +1,127 @@
+name: Sentinel
+
+on:
+  workflow_call:
+    inputs:
+      publish:
+        type: boolean
+        default: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  python:
+    name: Python checks
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: ./.github/actions/setup-sentinel
+      - name: Format
+        uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
+        with:
+          version-file: sentinel/uv.lock
+          src: sentinel
+          args: format --check
+      - name: Lint
+        uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
+        with:
+          version-file: sentinel/uv.lock
+          src: sentinel
+      - name: Startup tests
+        working-directory: sentinel
+        run: pytest -q
+      - id: version
+        name: Read version
+        working-directory: sentinel
+        run: echo "version=$(uv version --short)" >> "$GITHUB_OUTPUT"
+
+  ui:
+    name: UI build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: sentinel/ui/package-lock.json
+      - name: Build
+        working-directory: sentinel/ui
+        run: |
+          npm ci
+          npm run build
+
+  chart:
+    name: Chart checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.1
+      - uses: helm/chart-testing-action@720270857a28afd41e2426521a7801db09e9b510 # v2.9.0
+      - name: Lint chart with each CI values file
+        run: ct lint --charts infra/chart/sentinel --validate-maintainers=false --check-version-increment=false --helm-lint-extra-args=--strict
+
+  images:
+    name: Image (${{ matrix.image }})
+    needs: [python, ui, chart]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [api, ui, workflow, sre, pr-review, executor, knowledge, spark]
+    env:
+      IMAGE: ghcr.io/spike442/sentinel-${{ matrix.image }}:${{ needs.python.outputs.version }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+      - if: inputs.publish
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - id: build
+        name: Build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        env:
+          DOCKER_BUILD_SUMMARY: false
+        with:
+          context: .
+          file: sentinel/${{ matrix.image }}/Dockerfile
+          push: ${{ inputs.publish }}
+          tags: ${{ env.IMAGE }}
+          sbom: ${{ inputs.publish }}
+          provenance: ${{ inputs.publish && 'mode=max' || 'false' }}
+          cache-from: type=gha,scope=sentinel-${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=sentinel-${{ matrix.image }}
+      - if: inputs.publish
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3.9.1
+      - if: inputs.publish
+        name: Sign
+        run: cosign sign --yes "${IMAGE%:*}@${{ steps.build.outputs.digest }}"
+
+  publish-chart:
+    if: inputs.publish
+    name: Publish chart
+    needs: [python, images]
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ needs.python.outputs.version }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.1
+      - name: Package and push
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | helm registry login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          helm package infra/chart/sentinel --version "$VERSION" --app-version "$VERSION" --destination /tmp
+          helm push "/tmp/sentinel-$VERSION.tgz" "oci://ghcr.io/spike442/charts"

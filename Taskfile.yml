@@ -1,0 +1,58 @@
+version: '3'
+
+tasks:
+  default:
+    cmds:
+      - task --list
+
+  setup:
+    desc: Install Sentinel and its UI dependencies
+    cmds:
+      - cd sentinel && uv sync --locked --all-packages --group dev
+      - npm --prefix sentinel/ui ci
+      - pre-commit install
+
+  lint:
+    desc: Run the pre-commit secret scan, lint, and format hooks on every file
+    cmds:
+      - pre-commit run --all-files
+
+  ui:
+    desc: Serve the UI
+    dir: sentinel/ui
+    vars:
+      SENTINEL_API_URL: '{{.SENTINEL_API_URL | default "https://sentinel.timcasa.me/api"}}'
+    env:
+      SENTINEL_API_URL: '{{.SENTINEL_API_URL}}'
+    cmds:
+      - npm run dev
+
+  ansible:init:
+    desc: Install the Ansible deps
+    dir: infra/ansible
+    cmds:
+      - ansible-galaxy collection install -r requirements.yaml
+
+  sql-s3:
+    desc: Deploy one fresh-install component
+    dir: infra/ansible
+    env:
+      ANSIBLE_CONFIG: ansible.cfg
+    cmds:
+      - |-
+        component="{{.COMPONENT}}"
+        if [ -z "$component" ]; then
+          component="$(gum choose --header 'Select deployment component' all clickhouse postgresql s3)"
+        fi
+        case "$component" in
+          all|clickhouse|postgresql|s3) ;;
+          *) echo "Unsupported deployment component: $component" >&2; exit 1 ;;
+        esac
+        ansible-playbook deploy.yaml --limit "$component" -v {{.CLI_ARGS}}
+
+  rollout:
+    desc: Reconcile the Sentinel Flux Kustomization
+    vars:
+      NAMESPACE: '{{.NAMESPACE | default "agents"}}'
+    cmds:
+      - flux reconcile kustomization sentinel --namespace '{{.NAMESPACE}}' --with-source

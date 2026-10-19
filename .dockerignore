@@ -1,0 +1,15 @@
+.git
+.venv
+**/.venv
+**/node_modules
+**/dist
+**/build
+**/*.egg-info
+**/__pycache__
+**/.pytest_cache
+**/.idea
+.aws
+.codex
+.agents
+.env*
+**/.ruff_cache

@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinel-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ include "sentinel.standardLabels" . | indent 4 }}
+    app.kubernetes.io/name: sentinel
+    app.kubernetes.io/part-of: sentinel
+    app.kubernetes.io/role: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sentinel
+      app.kubernetes.io/role: api
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/common/config.yaml") . | sha256sum }}
+      labels:
+{{ include "sentinel.standardLabels" . | indent 8 }}
+        app.kubernetes.io/name: sentinel
+        app.kubernetes.io/part-of: sentinel
+        app.kubernetes.io/role: api
+    spec:
+      serviceAccountName: sentinel
+      terminationGracePeriodSeconds: 300
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: sentinel-api
+        image: {{ .Values.images.api.repository }}:{{ .Values.images.api.tag | default .Chart.AppVersion }}
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8070
+        - name: metrics
+          containerPort: 9100
+        startupProbe:
+          httpGet:
+            path: /api/healthz
+            port: http
+          failureThreshold: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/readyz
+            port: http
+        livenessProbe:
+          httpGet:
+            path: /api/healthz
+            port: http
+        env:
+        - name: HOME
+          value: /home/sentinel
+        - name: SENTINEL_KAFKA_USERNAME
+          value: {{ .Values.kafka.username | quote }}
+        - name: SENTINEL_KAFKA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets.app }}
+              key: KAFKA_PASSWORD
+        - name: SENTINEL_DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets.app }}
+              key: DATABASE_PASSWORD
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: [ALL]
+        resources:
+          requests:
+            cpu: 20m
+            memory: 256Mi
+          limits:
+            memory: 768Mi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: home
+          mountPath: /home/sentinel
+        - name: config
+          mountPath: /etc/sentinel
+          readOnly: true
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: home
+        emptyDir: {}
+      - name: config
+        configMap:
+          name: sentinel-config

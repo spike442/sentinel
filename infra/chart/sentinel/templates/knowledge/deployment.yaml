@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinel-knowledge
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ include "sentinel.standardLabels" . | indent 4 }}
+    app.kubernetes.io/name: sentinel-knowledge
+    app.kubernetes.io/part-of: sentinel
+    app.kubernetes.io/role: api
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sentinel-knowledge
+      app.kubernetes.io/role: api
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/common/config.yaml") . | sha256sum }}
+      labels:
+{{ include "sentinel.standardLabels" . | indent 8 }}
+        app.kubernetes.io/name: sentinel-knowledge
+        app.kubernetes.io/part-of: sentinel
+        app.kubernetes.io/role: api
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 65532
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+      - name: knowledge-api
+        image: {{ .Values.images.knowledge.repository }}:{{ .Values.images.knowledge.tag | default .Chart.AppVersion }}
+        imagePullPolicy: Always
+        command: [python, -m, sentinel.knowledge.api.main]
+        ports:
+        - {name: http, containerPort: 9092}
+        startupProbe:
+          httpGet: {path: /healthz, port: http}
+          failureThreshold: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet: {path: /readyz, port: http}
+        livenessProbe:
+          httpGet: {path: /healthz, port: http}
+        env:
+        - name: HOME
+          value: /home/sentinel
+        - name: SENTINEL_CLICKHOUSE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: {{ .Values.secrets.app }}, key: CLICKHOUSE_PASSWORD}
+        - name: SENTINEL_KNOWLEDGE_DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: {{ .Values.secrets.app }}, key: KNOWLEDGE_DATABASE_PASSWORD}
+        - name: S3_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef: {name: {{ .Values.secrets.app }}, key: S3_ACCESS_KEY_ID}
+        - name: S3_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef: {name: {{ .Values.secrets.app }}, key: S3_SECRET_ACCESS_KEY}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities: {drop: [ALL]}
+        resources:
+          requests: {cpu: "1", memory: 1Gi}
+          limits: {cpu: "3", memory: 4Gi}
+        volumeMounts:
+        - {name: tmp, mountPath: /tmp}
+        - {name: home, mountPath: /home/sentinel}
+        - {name: config, mountPath: /etc/sentinel, readOnly: true}
+      volumes:
+      - {name: tmp, emptyDir: {}}
+      - {name: home, emptyDir: {}}
+      - {name: config, configMap: {name: sentinel-config}}

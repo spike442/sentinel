@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinel-ui
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ include "sentinel.standardLabels" . | indent 4 }}
+    app.kubernetes.io/name: sentinel
+    app.kubernetes.io/part-of: sentinel
+    app.kubernetes.io/role: ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sentinel
+      app.kubernetes.io/role: ui
+  template:
+    metadata:
+      labels:
+{{ include "sentinel.standardLabels" . | indent 8 }}
+        app.kubernetes.io/name: sentinel
+        app.kubernetes.io/part-of: sentinel
+        app.kubernetes.io/role: ui
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: sentinel-ui
+        image: {{ .Values.images.ui.repository }}:{{ .Values.images.ui.tag | default .Chart.AppVersion }}
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: [ALL]
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+          limits:
+            memory: 64Mi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir: {}

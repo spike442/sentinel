@@ -1,0 +1,12 @@
+---
+- name: Run the files with psql
+  ansible.builtin.command:
+    argv: "{{ ['psql', '--no-password', '--set=ON_ERROR_STOP=1'] + (sql_paths | map('regex_replace', '^', '--file=') | list) }}"
+  environment:
+    PGHOST: "{{ db_host }}"
+    PGPORT: "{{ db_port }}"
+    PGDATABASE: "{{ db_database }}"
+    PGUSER: "{{ db_user }}"
+    PGPASSWORD: "{{ db_password }}"
+  when: sql_paths | length > 0
+  changed_when: true

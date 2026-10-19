@@ -1,0 +1,37 @@
+---
+- name: Install datastore clients
+  hosts: sql
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+    - name: Install the datastore client
+      ansible.builtin.include_role:
+        name: sql
+        tasks_from: install-client
+
+- name: Install the S3 client
+  hosts: s3
+  gather_facts: false
+  tasks:
+    - name: Install the S3 client
+      ansible.builtin.include_role:
+        name: s3
+        tasks_from: install-client
+
+- name: Deploy the SQL of the highest version
+  hosts: sql
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+    - name: Deploy the engine SQL
+      ansible.builtin.import_role:
+        name: sql
+
+- name: Initialize S3 context
+  hosts: s3
+  gather_facts: false
+  tasks:
+    - name: Initialize S3 context
+      ansible.builtin.import_role:
+        name: s3
+        tasks_from: upload-context

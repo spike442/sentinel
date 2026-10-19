@@ -1,0 +1,7 @@
+review:
+  allowed_confidence_levels: [high]
+  allowed_risk_levels: [low]
+  max_diff_bytes: 200000
+  max_file_bytes: 200000
+  max_tool_calls: 8
+  max_command_output_bytes: 12000

@@ -1,0 +1,39 @@
+---
+- name: Check for ClickHouse client
+  ansible.builtin.command: /usr/local/bin/clickhouse client --version
+  register: sql_clickhouse_client_path
+  changed_when: false
+  failed_when: false
+
+- name: Install ClickHouse client
+  become: true
+  when: sql_clickhouse_client_path.rc != 0
+  block:
+    - name: Create ClickHouse client directory
+      ansible.builtin.file:
+        path: /opt/clickhouse-common-static-26.8.25.14
+        state: directory
+        mode: "0755"
+
+    - name: Download ClickHouse client
+      ansible.builtin.get_url:
+        url: https://packages.clickhouse.com/tgz/lts/clickhouse-common-static-26.8.25.14-amd64.tgz
+        dest: /tmp/clickhouse-common-static-26.8.25.14-amd64.tgz
+        mode: "0600"
+
+    - name: Extract ClickHouse client
+      ansible.builtin.unarchive:
+        src: /tmp/clickhouse-common-static-26.8.25.14-amd64.tgz
+        dest: /opt
+        remote_src: true
+
+    - name: Link ClickHouse client
+      ansible.builtin.file:
+        src: /opt/clickhouse-common-static-26.8.25.14/usr/bin/clickhouse
+        dest: /usr/local/bin/clickhouse
+        state: link
+
+    - name: Remove ClickHouse archive
+      ansible.builtin.file:
+        path: /tmp/clickhouse-common-static-26.8.25.14-amd64.tgz
+        state: absent

@@ -1,0 +1,10 @@
+---
+all:
+  children:
+    sql:
+      hosts:
+        postgresql:
+        clickhouse:
+    storage:
+      hosts:
+        s3:

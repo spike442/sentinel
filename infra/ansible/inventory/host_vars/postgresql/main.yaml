@@ -1,0 +1,5 @@
+---
+db_host: postgresql.timcasa.me
+db_port: 9000
+db_database: sentinel
+db_user: sentinel

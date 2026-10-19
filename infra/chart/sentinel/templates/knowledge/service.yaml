@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: sentinel
+{{ include "sentinel.standardLabels" . | indent 4 }}
+  name: sentinel-knowledge
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app.kubernetes.io/name: sentinel-knowledge
+    app.kubernetes.io/role: api
+  ports:
+  - name: http
+    port: 9092
+    targetPort: http

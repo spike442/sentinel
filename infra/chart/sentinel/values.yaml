@@ -1,0 +1,99 @@
+images:
+  api:
+    repository: ghcr.io/spike442/sentinel-api
+    tag: ""
+  ui:
+    repository: ghcr.io/spike442/sentinel-ui
+    tag: ""
+  workflow:
+    repository: ghcr.io/spike442/sentinel-workflow
+    tag: ""
+  sre:
+    repository: ghcr.io/spike442/sentinel-sre
+    tag: ""
+  prReview:
+    repository: ghcr.io/spike442/sentinel-pr-review
+    tag: ""
+  executor:
+    repository: ghcr.io/spike442/sentinel-executor
+    tag: ""
+  knowledge:
+    repository: ghcr.io/spike442/sentinel-knowledge
+    tag: ""
+  spark:
+    repository: ghcr.io/spike442/sentinel-spark
+    tag: ""
+
+secrets:
+  app: sentinel-secrets
+
+agents:
+  sre:
+    enabled: true
+    runTimeoutSeconds: 1800
+  pr-review:
+    enabled: true
+    runTimeoutSeconds: 1800
+
+executor:
+  actionTimeoutSeconds: 900
+
+spark:
+  enabled: false
+
+postgres:
+  host: postgres0-rw.database.svc.cluster.local
+  database: sentinel
+  user: sentinel
+  knowledgeUser: sentinel_knowledge
+
+clickhouse:
+  host: clickhouse.database.svc.cluster.local
+  database: sentinel
+  user: sentinel
+
+kafka:
+  bootstrapServers: kafka-kafka-bootstrap.messaging.svc.cluster.local:9093
+  username: sentinel
+  consumerGroup: sentinel
+  users:
+    sre: sentinel-sre
+    pr-review: sentinel-pr-review
+    executor: sentinel-executor
+  cluster: kafka
+  topicNamespace: messaging
+  topicReplicas: 1
+  topicRetentionMs: 604800000
+  topics:
+    cluster_alerts: {name: sentinel.cluster.alerts, partitions: 1}
+    workflow_requests: {name: sentinel.workflow.requests, partitions: 3}
+    outcomes: {name: sentinel.workflow.outcomes, partitions: 1}
+    sre_commands: {name: sentinel.sre.commands, partitions: 3}
+    sre_returns: {name: sentinel.sre.returns, partitions: 3}
+    pr_review_commands: {name: sentinel.pr-review.commands, partitions: 3}
+    pr_review_returns: {name: sentinel.pr-review.returns, partitions: 3}
+    executor_commands: {name: sentinel.executor.commands, partitions: 3}
+    executor_returns: {name: sentinel.executor.returns, partitions: 3}
+
+s3:
+  endpoint: http://rustfs-svc.storage.svc.cluster.local:9000
+  region: us-east-1
+  bucket: sentinel
+
+prometheus:
+  url: http://kube-prometheus-stack-prometheus.observability.svc.cluster.local:9090
+
+alertmanager:
+  url: http://kube-prometheus-stack-alertmanager.observability.svc.cluster.local:9093
+
+networkPolicy:
+  enabled: true
+  monitoringNamespace: observability
+  storageNamespace: storage
+  messagingNamespace: messaging
+  ciliumEgress: false
+
+route:
+  hostname: sentinel.example.test
+  gatewayName: gateway
+  gatewayNamespace: network

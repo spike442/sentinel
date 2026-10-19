@@ -1,0 +1,13 @@
+repositories:
+  - owner: spike442
+    name: homelab
+    branch: main
+    clone_depth: 50
+  - owner: spike442
+    name: dotfiles
+    branch: main
+    clone_depth: 50
+  - owner: spike442
+    name: sentinel
+    branch: main
+    clone_depth: 50

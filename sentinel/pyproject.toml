@@ -1,0 +1,28 @@
+[project]
+name = "sentinel"
+version = "1.0.0"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv.workspace]
+members = ["api", "workflow", "sre", "pr-review", "executor", "knowledge", "core", "spark"]
+
+[dependency-groups]
+dev = ["pytest>=9,<10", "ruff==0.17.0"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "PLR0917"]
+
+[tool.ruff.lint.per-file-ignores]
+"spark/**" = ["UP017"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["."]

@@ -1,0 +1,14 @@
+---
+- name: Check for AWS CLI
+  ansible.builtin.command:
+    argv: [which, aws]
+  register: s3_aws_cli_path
+  changed_when: false
+  failed_when: false
+
+- name: Install AWS CLI
+  become: true
+  ansible.builtin.apt:
+    name: awscli
+    state: present
+  when: s3_aws_cli_path.rc != 0

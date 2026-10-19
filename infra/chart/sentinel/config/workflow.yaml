@@ -1,0 +1,8 @@
+sre:
+  incident:
+    repository: homelab
+    branch_prefix: sre
+    manual_action_timeout_seconds: 120
+pr_review:
+  merge_method: squash
+  review_poll_seconds: 3600

@@ -1,0 +1,4 @@
+---
+- name: Install the datastore client
+  ansible.builtin.include_tasks:
+    file: "{{ inventory_hostname }}-install-client.yaml"

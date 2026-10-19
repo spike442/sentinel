@@ -1,0 +1,6 @@
+limits:
+  max_tool_calls: 16
+  max_tool_output_bytes: 12000
+
+shell:
+  allowed_binaries: [kubectl, flux, helm, git, jq, yq, grep, rg, awk, cat, head, tail, sort, uniq, wc, date, pwd, ls, find, printf]

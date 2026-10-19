@@ -1,0 +1,14 @@
+---
+- name: Check for PostgreSQL client
+  ansible.builtin.command:
+    argv: [which, psql]
+  register: sql_postgresql_client_path
+  changed_when: false
+  failed_when: false
+
+- name: Install PostgreSQL client
+  become: true
+  ansible.builtin.apt:
+    name: postgresql-client
+    state: present
+  when: sql_postgresql_client_path.rc != 0

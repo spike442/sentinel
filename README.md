@@ -1,0 +1,2 @@
+[![Sentinel release](https://img.shields.io/github/v/tag/spike442/sentinel?filter=sentinel-*&sort=semver&label=release&labelColor=e8590c&color=blue)](https://github.com/spike442/sentinel/tags)
+[![Sentinel quality](https://img.shields.io/github/actions/workflow/status/spike442/sentinel/quality.yml?branch=main&label=quality&labelColor=e8590c)](https://github.com/spike442/sentinel/actions/workflows/quality.yml?query=branch%3Amain)

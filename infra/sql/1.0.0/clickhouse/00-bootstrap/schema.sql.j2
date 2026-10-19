@@ -1,0 +1,3 @@
+CREATE DATABASE IF NOT EXISTS sentinel;
+CREATE USER IF NOT EXISTS sentinel IDENTIFIED WITH sha256_hash BY '{{ db_parameters.password | hash("sha256") }}';
+GRANT ALL ON sentinel.* TO sentinel;

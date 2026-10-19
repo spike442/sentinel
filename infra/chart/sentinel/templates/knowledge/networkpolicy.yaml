@@ -1,0 +1,31 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/name: sentinel
+{{ include "sentinel.standardLabels" . | indent 4 }}
+  name: sentinel-knowledge
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: sentinel-knowledge
+      app.kubernetes.io/role: api
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: sentinel
+          app.kubernetes.io/role: workflow
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: sre
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: pr-review
+    ports:
+    - port: 9092
+      protocol: TCP
+{{- end }}

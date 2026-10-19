@@ -1,0 +1,50 @@
+---
+- name: Find the SQL versions
+  ansible.builtin.find:
+    paths: "{{ sql_versions_root }}"
+    file_type: directory
+  register: sql_versions
+
+- name: Require at least one SQL version
+  ansible.builtin.assert:
+    that:
+      - sql_versions.matched > 0
+    fail_msg: "{{ sql_versions_root }} must hold at least one version folder."
+    quiet: true
+
+- name: Select the highest SQL version
+  ansible.builtin.set_fact:
+    sql_root: "{{ sql_versions_root }}/{{ sql_versions.files | map(attribute='path') | map('basename') | community.general.version_sort | last }}"
+
+- name: Find the engine folders of the version
+  ansible.builtin.find:
+    paths: "{{ sql_root }}"
+    file_type: directory
+  register: sql_folders
+
+- name: Require SQL for the version and a host for every engine folder
+  vars:
+    unserved: "{{ sql_folders.files | map(attribute='path') | map('basename') | difference(groups['sql']) }}"
+  ansible.builtin.assert:
+    that:
+      - sql_folders.matched > 0
+      - unserved | length == 0
+    fail_msg: >-
+      {{ sql_root }} must exist and hold only engine folders that a host in group sql deploys
+      ({{ groups['sql'] | join(', ') }}){{ '; unserved: ' ~ (unserved | join(', ')) if unserved else '' }}.
+    quiet: true
+
+- name: Find the SQL files
+  ansible.builtin.find:
+    paths: "{{ sql_root }}/{{ inventory_hostname }}"
+    patterns: "*.sql"
+    recurse: true
+  register: sql_files
+
+- name: Run the SQL files with the engine client
+  ansible.builtin.include_tasks:
+    file: "{{ inventory_hostname }}.yaml"
+    apply:
+      tags: [always]
+  vars:
+    sql_paths: "{{ sql_files.files | map(attribute='path') | sort }}"

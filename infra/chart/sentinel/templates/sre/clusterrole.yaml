@@ -1,0 +1,52 @@
+{{- if .Values.agents.sre.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: sentinel
+{{ include "sentinel.standardLabels" . | indent 4 }}
+  name: sre-read
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - namespaces
+  - pods
+  - pods/log
+  - events
+  - services
+  - endpoints
+  - persistentvolumeclaims
+  - persistentvolumes
+  - configmaps
+  verbs: [get, list, watch]
+- apiGroups: [apps]
+  resources:
+  - deployments
+  - replicasets
+  - statefulsets
+  - daemonsets
+  verbs: [get, list, watch]
+- apiGroups: [batch]
+  resources:
+  - jobs
+  - cronjobs
+  verbs: [get, list, watch]
+- apiGroups:
+  - kustomize.toolkit.fluxcd.io
+  - helm.toolkit.fluxcd.io
+  - source.toolkit.fluxcd.io
+  - notification.toolkit.fluxcd.io
+  resources: ['*']
+  verbs: [get, list, watch]
+- apiGroups:
+  - gateway.networking.k8s.io
+  - gateway.envoyproxy.io
+  - cert-manager.io
+  - external-secrets.io
+  - kyverno.io
+  - policies.kyverno.io
+  - kopiur.home-operations.com
+  resources: ['*']
+  verbs: [get, list, watch]
+{{- end }}

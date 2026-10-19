@@ -1,0 +1,567 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "images",
+    "spark",
+    "secrets",
+    "postgres",
+    "clickhouse",
+    "kafka",
+    "s3",
+    "prometheus",
+    "alertmanager",
+    "route",
+    "executor"
+  ],
+  "properties": {
+    "images": {
+      "type": "object",
+      "required": [
+        "api",
+        "ui",
+        "workflow",
+        "sre",
+        "prReview",
+        "executor",
+        "knowledge",
+        "spark"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "api": {
+          "$ref": "#/definitions/image"
+        },
+        "ui": {
+          "$ref": "#/definitions/image"
+        },
+        "workflow": {
+          "$ref": "#/definitions/image"
+        },
+        "sre": {
+          "$ref": "#/definitions/image"
+        },
+        "prReview": {
+          "$ref": "#/definitions/image"
+        },
+        "executor": {
+          "$ref": "#/definitions/image"
+        },
+        "knowledge": {
+          "$ref": "#/definitions/image"
+        },
+        "spark": {
+          "$ref": "#/definitions/image"
+        }
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "required": [
+        "app"
+      ],
+      "properties": {
+        "app": {
+          "$ref": "#/definitions/name"
+        }
+      }
+    },
+    "agents": {
+      "type": "object",
+      "properties": {
+        "sre": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "runTimeoutSeconds"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "runTimeoutSeconds": {
+              "$ref": "#/definitions/seconds"
+            }
+          }
+        },
+        "pr-review": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "runTimeoutSeconds"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "runTimeoutSeconds": {
+              "$ref": "#/definitions/seconds"
+            }
+          }
+        }
+      }
+    },
+    "executor": {
+      "type": "object",
+      "required": [
+        "actionTimeoutSeconds"
+      ],
+      "properties": {
+        "actionTimeoutSeconds": {
+          "$ref": "#/definitions/seconds"
+        }
+      }
+    },
+    "spark": {
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "storageClass": {
+          "$ref": "#/definitions/name"
+        }
+      }
+    },
+    "postgres": {
+      "type": "object",
+      "required": [
+        "host",
+        "database",
+        "user",
+        "knowledgeUser"
+      ],
+      "properties": {
+        "host": {
+          "$ref": "#/definitions/name"
+        },
+        "database": {
+          "$ref": "#/definitions/name"
+        },
+        "user": {
+          "$ref": "#/definitions/name"
+        },
+        "knowledgeUser": {
+          "$ref": "#/definitions/name"
+        }
+      }
+    },
+    "clickhouse": {
+      "type": "object",
+      "required": [
+        "host",
+        "database",
+        "user"
+      ],
+      "properties": {
+        "host": {
+          "$ref": "#/definitions/name"
+        },
+        "database": {
+          "$ref": "#/definitions/name"
+        },
+        "user": {
+          "$ref": "#/definitions/name"
+        }
+      }
+    },
+    "kafka": {
+      "type": "object",
+      "required": [
+        "bootstrapServers",
+        "username",
+        "consumerGroup",
+        "users",
+        "topics",
+        "cluster",
+        "topicNamespace",
+        "topicReplicas",
+        "topicRetentionMs"
+      ],
+      "properties": {
+        "bootstrapServers": {
+          "$ref": "#/definitions/name"
+        },
+        "username": {
+          "$ref": "#/definitions/name"
+        },
+        "consumerGroup": {
+          "$ref": "#/definitions/name"
+        },
+        "users": {
+          "type": "object",
+          "required": [
+            "sre",
+            "pr-review",
+            "executor"
+          ],
+          "properties": {
+            "sre": {
+              "$ref": "#/definitions/name"
+            },
+            "pr-review": {
+              "$ref": "#/definitions/name"
+            },
+            "executor": {
+              "$ref": "#/definitions/name"
+            }
+          }
+        },
+        "topics": {
+          "type": "object",
+          "required": [
+            "cluster_alerts",
+            "workflow_requests",
+            "outcomes",
+            "sre_commands",
+            "sre_returns",
+            "pr_review_commands",
+            "pr_review_returns",
+            "executor_commands",
+            "executor_returns"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "cluster_alerts": {
+              "type": "object",
+              "required": [
+                "name",
+                "partitions"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "$ref": "#/definitions/name"
+                },
+                "partitions": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "workflow_requests": {
+              "type": "object",
+              "required": [
+                "name",
+                "partitions"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "$ref": "#/definitions/name"
+                },
+                "partitions": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "outcomes": {
+              "type": "object",
+              "required": [
+                "name",
+                "partitions"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "$ref": "#/definitions/name"
+                },
+                "partitions": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "sre_commands": {
+              "type": "object",
+              "required": [
+                "name",
+                "partitions"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "$ref": "#/definitions/name"
+                },
+                "partitions": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "sre_returns": {
+              "type": "object",
+              "required": [
+                "name",
+                "partitions"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "$ref": "#/definitions/name"
+                },
+                "partitions": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "pr_review_commands": {
+              "type": "object",
+              "required": [
+                "name",
+                "partitions"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "$ref": "#/definitions/name"
+                },
+                "partitions": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "pr_review_returns": {
+              "type": "object",
+              "required": [
+                "name",
+                "partitions"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "$ref": "#/definitions/name"
+                },
+                "partitions": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "executor_commands": {
+              "type": "object",
+              "required": [
+                "name",
+                "partitions"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "$ref": "#/definitions/name"
+                },
+                "partitions": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "executor_returns": {
+              "type": "object",
+              "required": [
+                "name",
+                "partitions"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "$ref": "#/definitions/name"
+                },
+                "partitions": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          }
+        },
+        "cluster": {
+          "$ref": "#/definitions/name"
+        },
+        "topicNamespace": {
+          "$ref": "#/definitions/name"
+        },
+        "topicReplicas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "topicRetentionMs": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "s3": {
+      "type": "object",
+      "required": [
+        "endpoint",
+        "region",
+        "bucket"
+      ],
+      "properties": {
+        "endpoint": {
+          "$ref": "#/definitions/url"
+        },
+        "region": {
+          "$ref": "#/definitions/name"
+        },
+        "bucket": {
+          "$ref": "#/definitions/name"
+        }
+      }
+    },
+    "prometheus": {
+      "type": "object",
+      "required": [
+        "url"
+      ],
+      "properties": {
+        "url": {
+          "type": "string"
+        }
+      }
+    },
+    "alertmanager": {
+      "type": "object",
+      "required": [
+        "url"
+      ],
+      "properties": {
+        "url": {
+          "type": "string"
+        }
+      }
+    },
+    "route": {
+      "type": "object",
+      "required": [
+        "hostname",
+        "gatewayName",
+        "gatewayNamespace"
+      ],
+      "properties": {
+        "hostname": {
+          "$ref": "#/definitions/name"
+        },
+        "gatewayName": {
+          "$ref": "#/definitions/name"
+        },
+        "gatewayNamespace": {
+          "$ref": "#/definitions/name"
+        }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "monitoringNamespace": {
+          "$ref": "#/definitions/name"
+        },
+        "storageNamespace": {
+          "$ref": "#/definitions/name"
+        },
+        "messagingNamespace": {
+          "$ref": "#/definitions/name"
+        },
+        "ciliumEgress": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "agents": {
+            "properties": {
+              "sre": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "prometheus": {
+            "properties": {
+              "url": {
+                "$ref": "#/definitions/url"
+              }
+            }
+          },
+          "alertmanager": {
+            "properties": {
+              "url": {
+                "$ref": "#/definitions/url"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "spark": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "spark": {
+            "required": [
+              "storageClass"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "url": {
+      "type": "string",
+      "pattern": "^https?://[^\\s]+$"
+    },
+    "image": {
+      "type": "object",
+      "required": [
+        "repository"
+      ],
+      "properties": {
+        "repository": {
+          "$ref": "#/definitions/name"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    },
+    "seconds": {
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}

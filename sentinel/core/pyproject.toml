@@ -1,0 +1,42 @@
+[project]
+name = "sentinel-core"
+version = "1.0.0"
+requires-python = ">=3.12"
+dependencies = [
+  "pydantic>=2.10,<3",
+  "pydantic-settings[yaml]>=2.7,<3",
+]
+
+[project.optional-dependencies]
+knowledge-client = [
+  "httpx>=0.28,<1",
+]
+database = [
+  "psycopg[binary]>=3.2,<4",
+  "SQLAlchemy>=2.0,<3",
+]
+kafka = [
+  "confluent-kafka>=2.8,<3",
+]
+github = [
+  "httpx>=0.28,<1",
+  "PyJWT[crypto]>=2.10,<3",
+]
+metrics = [
+  "prometheus-client>=0.21,<1",
+]
+agents = [
+  "boto3>=1.35,<2",
+  "langchain>=1.0,<2",
+  "langchain-core>=1.0,<2",
+  "langchain-openai>=0.3.26,<2",
+]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = true
+include = ["sentinel.core*"]

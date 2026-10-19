@@ -1,0 +1,32 @@
+---
+- name: Initialize ClickHouse
+  when: sql_paths | length > 0
+  block:
+    - name: Set the ClickHouse bootstrap template path
+      ansible.builtin.set_fact:
+        sql_bootstrap_template: "{{ sql_root }}/{{ inventory_hostname }}/00-bootstrap/schema.sql.j2"
+
+    - name: Set the ClickHouse client command
+      ansible.builtin.set_fact:
+        sql_clickhouse_client_command: /usr/local/bin/clickhouse
+
+    - name: Read ClickHouse schema files
+      vars:
+        schema_paths: "{{ sql_paths | reject('search', '/00-bootstrap/') | list }}"
+      ansible.builtin.set_fact:
+        sql_schema_content: "{{ sql_schema_content | default('') ~ lookup('file', item) ~ '\n' }}"
+      loop: "{{ schema_paths }}"
+
+    - name: Run the ClickHouse SQL
+      ansible.builtin.command:
+        argv:
+          - "{{ sql_clickhouse_client_command }}"
+          - client
+          - "--host={{ db_host }}"
+          - "--port={{ db_port }}"
+          - "--user={{ db_user }}"
+          - "--database={{ db_database }}"
+        stdin: "{{ lookup('template', sql_bootstrap_template) ~ '\n' ~ sql_schema_content }}"
+      environment:
+        CLICKHOUSE_PASSWORD: "{{ db_password }}"
+      changed_when: true

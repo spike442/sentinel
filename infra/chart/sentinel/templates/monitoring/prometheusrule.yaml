@@ -1,0 +1,30 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app.kubernetes.io/name: sentinel
+{{ include "sentinel.standardLabels" . | indent 4 }}
+  name: sentinel-rules
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+  - name: sentinel.rules
+    rules:
+    - alert: SentinelStateUnavailable
+      expr: max(sentinel_state_up{namespace="{{ .Release.Namespace }}"}) < 1 or absent(sentinel_state_up{namespace="{{ .Release.Namespace }}"})
+      for: 10m
+      labels:
+        severity: critical
+      annotations:
+        summary: Sentinel cannot read its PostgreSQL state
+        description: The Sentinel API has not reported readable incident and review state for 10 minutes.
+{{- if .Values.agents.sre.enabled }}
+    - alert: SentinelClusterAlertProcessingFailing
+      expr: sum(rate(sentinel_cluster_alert_events_total{namespace="{{ .Release.Namespace }}",result!="ok"}[15m])) > 0
+      for: 15m
+      labels:
+        severity: warning
+      annotations:
+        summary: Sentinel is failing to process cluster alerts
+        description: The workflow is failing Alertmanager cluster alert events; check its logs and consumer lag.
+{{- end }}

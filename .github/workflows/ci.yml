@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sentinel-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sentinel:
+    name: CI
+    uses: ./.github/workflows/sentinel.yml
+    permissions:
+      contents: read

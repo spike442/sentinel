@@ -1,0 +1,5 @@
+---
+db_host: clickhouse.timcasa.me
+db_port: 9001
+db_database: default
+db_user: admin

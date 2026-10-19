@@ -1,0 +1,122 @@
+{{- if include "sentinel.anyAgentEnabled" . }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinel-workflow
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ include "sentinel.standardLabels" . | indent 4 }}
+    app.kubernetes.io/name: sentinel
+    app.kubernetes.io/part-of: sentinel
+    app.kubernetes.io/role: workflow
+    app.kubernetes.io/component: workflows
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sentinel
+      app.kubernetes.io/role: workflow
+      app.kubernetes.io/component: workflows
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print .Template.BasePath "/common/config.yaml") . | sha256sum }}
+      labels:
+{{ include "sentinel.standardLabels" . | indent 8 }}
+        app.kubernetes.io/name: sentinel
+        app.kubernetes.io/part-of: sentinel
+        app.kubernetes.io/role: workflow
+        app.kubernetes.io/component: workflows
+    spec:
+      serviceAccountName: sentinel
+      terminationGracePeriodSeconds: 300
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: sentinel-workflow
+        image: {{ .Values.images.workflow.repository }}:{{ .Values.images.workflow.tag | default .Chart.AppVersion }}
+        imagePullPolicy: Always
+        command: [python, -m, sentinel.workflow]
+        ports:
+        - name: metrics
+          containerPort: 9100
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "import os, sys, time; sys.exit(time.time() - os.path.getmtime('/tmp/sentinel-workflow-heartbeat') > 300)"
+          initialDelaySeconds: 60
+          periodSeconds: 60
+          failureThreshold: 3
+        env:
+        - name: HOME
+          value: /home/sentinel
+        - name: SENTINEL_DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets.app }}
+              key: DATABASE_PASSWORD
+        - name: SENTINEL_KAFKA_USERNAME
+          value: {{ .Values.kafka.username | quote }}
+        - name: SENTINEL_KAFKA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets.app }}
+              key: KAFKA_PASSWORD
+        - name: SENTINEL_DISCORD_WEBHOOK_URL
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets.app }}
+              key: DISCORD_WEBHOOK_URL
+        {{- if (index .Values.agents "pr-review").enabled }}
+        - name: SENTINEL_GITHUB_APP_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets.app }}
+              key: GITHUB_APP_ID
+        - name: SENTINEL_GITHUB_INSTALLATION_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets.app }}
+              key: GITHUB_INSTALLATION_ID
+        - name: SENTINEL_GITHUB_APP_PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets.app }}
+              key: GITHUB_APP_PRIVATE_KEY
+        {{- end }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: [ALL]
+        resources:
+          requests:
+            cpu: 20m
+            memory: 256Mi
+          limits:
+            memory: 768Mi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: home
+          mountPath: /home/sentinel
+        - name: config
+          mountPath: /etc/sentinel
+          readOnly: true
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: home
+        emptyDir: {}
+      - name: config
+        configMap:
+          name: sentinel-config
+{{- end }}

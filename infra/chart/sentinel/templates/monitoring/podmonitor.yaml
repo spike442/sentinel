@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  labels:
+    app.kubernetes.io/name: sentinel
+{{ include "sentinel.standardLabels" . | indent 4 }}
+  name: sentinel
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sentinel
+      app.kubernetes.io/part-of: sentinel
+    matchExpressions:
+    - {key: app.kubernetes.io/role, operator: In, values: [api, workflow]}
+  podMetricsEndpoints:
+  - port: metrics
+    interval: 60s

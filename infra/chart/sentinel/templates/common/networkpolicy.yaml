@@ -1,0 +1,118 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/name: sentinel
+{{ include "sentinel.standardLabels" . | indent 4 }}
+  name: sentinel-api
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: sentinel
+      app.kubernetes.io/role: api
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Values.route.gatewayNamespace }}
+    ports:
+    - {port: 8070, protocol: TCP}
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Values.networkPolicy.monitoringNamespace }}
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: alertmanager
+    ports:
+    - {port: 8070, protocol: TCP}
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Values.networkPolicy.monitoringNamespace }}
+    ports:
+    - {port: 9100, protocol: TCP}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/name: sentinel
+{{ include "sentinel.standardLabels" . | indent 4 }}
+  name: sentinel-ui
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: sentinel
+      app.kubernetes.io/role: ui
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Values.route.gatewayNamespace }}
+    ports:
+    - {port: 8080, protocol: TCP}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/name: sentinel
+{{ include "sentinel.standardLabels" . | indent 4 }}
+  name: sentinel-workflow-ingress
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: sentinel
+      app.kubernetes.io/role: workflow
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Values.networkPolicy.monitoringNamespace }}
+    ports:
+    - {port: 9100, protocol: TCP}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/name: sentinel
+{{ include "sentinel.standardLabels" . | indent 4 }}
+  name: sentinel-jobs-deny-ingress
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchExpressions:
+    - {key: app.kubernetes.io/name, operator: In, values: [sre, pr-review, sentinel-executor]}
+  policyTypes: [Ingress]
+{{- end }}
+{{- if .Values.networkPolicy.ciliumEgress }}
+{{- $egress := dict "sre" (list "dns" "apiserver" "knowledge" "prometheus" "storage" "messaging" "internet") "pr-review" (list "dns" "knowledge" "storage" "messaging" "internet") "sentinel-executor" (list "dns" "apiserver" "messaging" "internet") }}
+{{- range $component := list "sre" "pr-review" "sentinel-executor" }}
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/name: sentinel
+{{ include "sentinel.standardLabels" $ | indent 4 }}
+  name: {{ $component }}-egress
+  namespace: {{ $.Release.Namespace }}
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $component }}
+  egress:
+{{- range $rule := index $egress $component }}
+{{ include (printf "sentinel.egress.%s" $rule) $ | indent 2 }}
+{{- end }}
+{{- end }}
+{{- end }}

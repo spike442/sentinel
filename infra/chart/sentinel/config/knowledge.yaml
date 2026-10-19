@@ -1,0 +1,19 @@
+rag:
+  embedding_model_path: /app/models/embedding
+  embedding_model: nomic-ai/nomic-embed-text-v1.5
+  document_prefix: 'search_document: '
+  query_prefix: 'search_query: '
+  chunk_tokens: 384
+  overlap_tokens: 48
+  batch_size: 8
+  candidate_results: 20
+  max_results: 6
+  max_context_tokens: 2500
+  index_interval_seconds: 3600
+  sources:
+    - domains: [sre, pr-review]
+      repository: homelab
+    - domains: [pr-review]
+      repository: sentinel
+    - domains: [pr-review]
+      repository: dotfiles

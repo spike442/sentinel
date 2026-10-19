@@ -1,0 +1,4 @@
+---
+spark:
+  enabled: true
+  storageClass: openebs-hostpath

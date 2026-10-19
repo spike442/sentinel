@@ -1,0 +1,77 @@
+{{- if .Values.agents.sre.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinel-sre
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ include "sentinel.standardLabels" . | indent 4 }}
+    app.kubernetes.io/name: sre
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: sre}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/common/config.yaml") . | sha256sum }}
+      labels:
+{{ include "sentinel.standardLabels" . | indent 8 }}
+        app.kubernetes.io/name: sre
+        app.kubernetes.io/part-of: sentinel
+    spec:
+      serviceAccountName: sre
+      terminationGracePeriodSeconds: {{ .Values.agents.sre.runTimeoutSeconds | int }}
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 65532
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+      - name: sre
+        image: {{ .Values.images.sre.repository }}:{{ .Values.images.sre.tag | default .Chart.AppVersion }}
+        imagePullPolicy: Always
+        command: [python, -m, sentinel.agents.sre.worker]
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "import os, sys, time; sys.exit(time.time() - os.path.getmtime('/tmp/sentinel-worker-heartbeat') > {{ .Values.agents.sre.runTimeoutSeconds | int }})"
+          initialDelaySeconds: 60
+          periodSeconds: 60
+          failureThreshold: 3
+        env:
+        - {name: HOME, value: /home/sentinel}
+        - {name: KUBECONFIG, value: /home/sentinel/.kube/config}
+        - {name: SENTINEL_KAFKA_USERNAME, value: {{ (index .Values.kafka.users "sre") | quote }}}
+        - name: SENTINEL_KAFKA_PASSWORD
+          valueFrom: {secretKeyRef: {name: {{ .Values.secrets.app }}, key: KAFKA_SRE_PASSWORD}}
+        - name: LLM_API_KEY
+          valueFrom: {secretKeyRef: {name: {{ .Values.secrets.app }}, key: LLM_API_KEY}}
+        - name: S3_ACCESS_KEY_ID
+          valueFrom: {secretKeyRef: {name: {{ .Values.secrets.app }}, key: S3_ACCESS_KEY_ID}}
+        - name: S3_SECRET_ACCESS_KEY
+          valueFrom: {secretKeyRef: {name: {{ .Values.secrets.app }}, key: S3_SECRET_ACCESS_KEY}}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities: {drop: [ALL]}
+        resources:
+          requests: {cpu: 50m, memory: 256Mi}
+          limits: {memory: 768Mi}
+        volumeMounts:
+        - {name: config, mountPath: /etc/sentinel, readOnly: true}
+        - {name: home, mountPath: /home/sentinel}
+        - {name: kubeconfig, mountPath: /home/sentinel/.kube, readOnly: true}
+        - {name: tmp, mountPath: /tmp}
+        - {name: repo, mountPath: /data}
+      volumes:
+      - {name: config, configMap: {name: sentinel-config}}
+      - {name: home, emptyDir: {}}
+      - {name: tmp, emptyDir: {}}
+      - {name: repo, emptyDir: {}}
+      - name: kubeconfig
+        configMap:
+          name: sre-kubeconfig
+          items: [{key: config, path: config}]
+{{- end }}

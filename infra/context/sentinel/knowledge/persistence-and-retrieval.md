@@ -1,0 +1,115 @@
+# Sentinel domain persistence and retrieval
+
+Repository: `sentinel`. Scope: database ownership, domain history, and grounded agent input.
+
+## Responsibilities
+
+Sentinel stores current incidents, reviews, feedback, action results, and their UI-visible history in PostgreSQL.
+Sentinel publishes the saved incident or review after each completed workflow to
+`sentinel.workflow.outcomes`. Spark archives those messages to S3 under
+`raw/workflows/domain=<domain>/run_date=<date>/` and logs their status.
+It does not write to ClickHouse. Archive object keys use the workflow ID, so a retried
+micro-batch overwrites the same object. The stream runs one micro-batch every `streaming.trigger_interval`
+(`infra/chart/sentinel/config/spark.yml`, 30 seconds) instead of polling Kafka continuously, so an idle topic
+costs one offset check per interval and an archive lands within that interval. The stream reads with
+`failOnDataLoss=false`: if Spark is down longer than the topic retention (7 days), it resumes from the oldest
+retained offset and logs the gap instead of refusing to start; the missed outcomes are lost from the archive but
+remain in PostgreSQL. It consumes as `kafka.group.id` `sentinel-spark-outcomes` although Structured Streaming keeps
+offsets in its checkpoint, because the `sentinel` Kafka user may only use consumer groups prefixed `sentinel-`.
+Agent workers have no platform status table. They receive commands and return decisions
+through Kafka; Sentinel owns application database access.
+
+PostgreSQL `incidents` and `pr_reviews` hold the current state in dedicated columns.
+Structured values such as alerts, diagnoses, timelines, checks, and action histories each
+have their own JSONB column. Domain repositories
+create missing records with an atomic `INSERT ... ON CONFLICT DO NOTHING`, then lock the
+row with `SELECT FOR UPDATE`. Inside that transaction the repository copies the row into a
+frozen snapshot, asks the pure state machine (`sentinel/workflow/src/sentinel/workflow/incidents/machine.py`,
+`pr_review/machine.py`) to decide the event at the database clock, and writes back only the
+returned state: `Accepted`, `Unchanged`, `Rejected`, `Missing`, or `Removed`. The machines
+never mutate inputs or perform I/O, and each `transition` rejects a status change that the workflow
+graph in `sentinel/core/src/sentinel/core/state/workflows.py` does not list; an outcome that keeps its status is
+not a change. Changed JSONB values are written as new objects so SQLAlchemy detects them. A review's identity is
+a stable UUID of its pull request (owner, repository, number), so every revision, replay, and fix of one PR is an
+attempt of one row; incident identities remain alert fingerprints. Workflow IDs guard stale Kafka results.
+Both domains keep their history in two append-only, never-trimmed JSONB columns built by
+`sentinel/core/src/sentinel/core/state/history.py`: `timeline` (status changes) and `attempts` (one entry per agent
+run with its trigger, prompt, revision, status, result, audit actions, and tool budget). The other columns are the
+latest view; an agent receives only the last five finished attempts, without audit trails
+(`sentinel/core/src/sentinel/core/contracts/history.py`).
+UI deletion removes the incident or review row from PostgreSQL. A later alert or discovery
+of the same PR can create a new row. The knowledge index retires documents whose
+source row is absent on its next successful indexing run.
+
+## Initialization and recovery
+
+SQL lives under `infra/sql/<version>/<engine>/<domain>/`. Installs always start from scratch from the highest version folder; there are no migrations, and a release in development edits its own folder in place. Initialize a fresh installation by hand
+with `task deploy` (selecting the component with `gum`, or setting `COMPONENT=<clickhouse|postgresql|s3>`)
+using the Ansible playbook `infra/ansible/deploy.yaml` after Flux created the PostgreSQL database and roles and the ClickHouse
+server, before deploying Sentinel. Each service is an inventory host (`postgresql`, `clickhouse`, `s3`)
+with its client settings in `infra/ansible/inventory/host_vars/<host>/main.yaml` and its 1Password lookups
+in `secrets.yaml`. The SQL module is one `sql` role: it selects
+the highest version folder under `infra/sql/`, finds the files of the host's engine folder there in path order, and hands them to
+`roles/sql/tasks/<host>.yaml`, which runs them in one session of the engine's own client. `psql`
+connects as `sentinel`; `clickhouse client` connects to the native port as `admin`, because
+`clickhouse/00-bootstrap` creates the `sentinel` database and runtime user (so ClickHouse tables are
+written as `sentinel.<table>`). The ClickHouse runtime-user password is rendered into a temporary
+bootstrap file and removed after the client exits. Both stop at the first error. A
+release adds SQL by adding its version folder; a missing version folder or an engine folder that no
+host in group `sql` deploys stops the module. The S3 module creates the Sentinel bucket with RustFS
+credentials from 1Password, then uploads prompts and knowledge. ClickHouse secrets never enter the repository or command arguments. The application does
+not execute schema SQL. A fresh installation starts with empty domain tables.
+
+Homelab provisions ClickHouse separately from Sentinel's database/user setup. Installs are always
+fresh; model files and knowledge vectors are regenerated by indexing.
+
+## Knowledge indexing
+
+Repository knowledge in `infra/context/<repository>/knowledge/` is published to
+`s3://sentinel/context/<repository>/knowledge/`. Metadata lists eligible domains so SRE and PR Review
+share content and embeddings. Agent instructions live alongside it in
+`infra/context/<repository>/prompts/<agent>/` and are excluded from knowledge indexing.
+
+Each `rag.sources` entry names the agents that may retrieve its files (`domains`), and a search returns only
+the knowledge of the repository it is for: PR Review loads `homelab` knowledge for a `homelab` pull request and
+`dotfiles` knowledge for a `dotfiles` one, while SRE, which investigates only `homelab`, retrieves only
+`homelab` knowledge. Only these S3 knowledge files are indexed. Incident and review records are not: their audit trails are
+raw tool output that would crowd out the curated documents. The knowledge service keeps its PostgreSQL
+credentials (`postgres.knowledgeUser`, `KNOWLEDGE_DATABASE_PASSWORD`, and the read grants in
+`infra/sql/1.0.0/postgresql/30-knowledge/`) for a later outcome index, but does not connect today.
+Learning means retrieving evidence, not training the LLM.
+
+The knowledge service loads the pinned ONNX model from the `sentinel-knowledge` image once and
+shares it between search and indexing. It counts tokens and generates embeddings in process,
+so splitting and retrieval do not make per-chunk HTTP requests.
+Documents and queries have distinct task prefixes. Model revision, dimensions, and chunking form
+an indexing signature; changing them rebuilds embeddings.
+
+ClickHouse `knowledge_documents` holds source content, scope, revisions, and published generations.
+`knowledge_chunks` holds text and vectors with text and HNSW indexes. Chunks are inserted before
+their generation is published, keeping incomplete documents invisible. Objects missing from S3 are
+retired after successful ingestion of all sources.
+
+Indexing runs in a background thread of the knowledge service, on startup and every
+`rag.index_interval_seconds`; a failed pass is logged and retried within 60 seconds. The
+Deployment has one replica and the `Recreate` strategy, so passes never overlap. Keep configured
+S3 prefixes limited to knowledge documents. The knowledge service becomes ready only after a
+complete indexing pass succeeds. A later failed pass is logged and retried
+within a minute while search keeps serving the existing index; readiness also checks ClickHouse connectivity.
+
+## Retrieval
+
+Sentinel preloads RAG context from the private knowledge API before each SRE investigation or PR review. The API filters by
+domain/repository, ranks chunks by embedding similarity, and applies
+result/token budgets. Excerpts carry source and chunk references into worker input. The agents can
+also call `search_knowledge` for focused follow-up questions through Sentinel's internal knowledge
+service. The tool keeps the same domain/repository scope and result budget as the preload. Historical
+proposals are evidence to evaluate, not instructions or current cluster state.
+
+The model generates vectors in the knowledge service; ClickHouse stores and
+searches them. Only the knowledge service contacts ClickHouse. Mandatory prompts and live tool
+verification remain necessary.
+
+Sources: `sentinel/workflow/src/sentinel/workflow/incidents/`, `sentinel/workflow/src/sentinel/workflow/reviews/`, `sentinel/knowledge/src/sentinel/knowledge/`,
+`infra/sql/`,
+`infra/chart/sentinel/config/common/clickhouse.yaml`, `infra/chart/sentinel/config/knowledge.yaml`, and the Homelab ClickHouse app definition.

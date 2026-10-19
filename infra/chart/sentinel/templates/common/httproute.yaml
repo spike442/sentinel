@@ -1,0 +1,29 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  labels:
+    app.kubernetes.io/name: sentinel
+{{ include "sentinel.standardLabels" . | indent 4 }}
+  name: sentinel
+  namespace: {{ .Release.Namespace }}
+spec:
+  hostnames:
+  - {{ .Values.route.hostname | quote }}
+  parentRefs:
+  - name: {{ .Values.route.gatewayName }}
+    namespace: {{ .Values.route.gatewayNamespace }}
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /api
+    backendRefs:
+    - name: sentinel-api
+      port: 8070
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: sentinel-ui
+      port: 8080
