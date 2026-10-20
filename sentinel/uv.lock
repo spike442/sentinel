@@ -2104,7 +2104,7 @@ wheels = [
 
 [[package]]
 name = "sentinel"
-version = "1.0.0"
+version = "1.0.1"
 source = { virtual = "." }
 
 [package.dev-dependencies]
@@ -2123,7 +2123,7 @@ dev = [
 
 [[package]]
 name = "sentinel-api"
-version = "1.0.0"
+version = "1.0.1"
 source = { editable = "api" }
 dependencies = [
     { name = "fastapi" },
@@ -2140,7 +2140,7 @@ requires-dist = [
 
 [[package]]
 name = "sentinel-core"
-version = "1.0.0"
+version = "1.0.1"
 source = { editable = "core" }
 dependencies = [
     { name = "pydantic" },
@@ -2192,7 +2192,7 @@ provides-extras = ["knowledge-client", "database", "kafka", "github", "metrics",
 
 [[package]]
 name = "sentinel-executor"
-version = "1.0.0"
+version = "1.0.1"
 source = { editable = "executor" }
 dependencies = [
     { name = "httpx" },
@@ -2207,7 +2207,7 @@ requires-dist = [
 
 [[package]]
 name = "sentinel-knowledge"
-version = "1.0.0"
+version = "1.0.1"
 source = { editable = "knowledge" }
 dependencies = [
     { name = "boto3" },
@@ -2234,7 +2234,7 @@ requires-dist = [
 
 [[package]]
 name = "sentinel-pr-review-agent"
-version = "1.0.0"
+version = "1.0.1"
 source = { editable = "pr-review" }
 dependencies = [
     { name = "httpx" },
@@ -2249,7 +2249,7 @@ requires-dist = [
 
 [[package]]
 name = "sentinel-spark"
-version = "1.0.0"
+version = "1.0.1"
 source = { editable = "spark" }
 dependencies = [
     { name = "boto3" },
@@ -2264,7 +2264,7 @@ requires-dist = [
 
 [[package]]
 name = "sentinel-sre-agent"
-version = "1.0.0"
+version = "1.0.1"
 source = { editable = "sre" }
 dependencies = [
     { name = "httpx" },
@@ -2279,7 +2279,7 @@ requires-dist = [
 
 [[package]]
 name = "sentinel-workflow"
-version = "1.0.0"
+version = "1.0.1"
 source = { editable = "workflow" }
 dependencies = [
     { name = "sentinel-core", extra = ["database", "github", "kafka", "knowledge-client", "metrics"] },
