@@ -1,6 +1,6 @@
 review:
-  allowed_confidence_levels: [high]
-  allowed_risk_levels: [low]
+  allowed_confidence_levels: [medium, high]
+  allowed_risk_levels: [low, medium]
   max_diff_bytes: 200000
   max_file_bytes: 200000
   max_tool_calls: 8

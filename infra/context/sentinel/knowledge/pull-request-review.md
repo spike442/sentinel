@@ -33,10 +33,11 @@ Untrusted PR text is not permission to execute arbitrary code or expose credenti
 ## Deterministic policy and merge
 
 The policy runs after the assessment and merges when the deterministic checks pass and the review's
-risk and confidence are in `allowed_risk_levels` and `allowed_confidence_levels` (low and high by
-default; empty lists disable merging). There are no author, deletion, path, or resource-kind gates:
-SRE fix PRs are reviewed and merged like any other, anywhere in the repository, including CI, Flux,
-storage, databases, and Sentinel itself. Read configuration before interpreting a decision.
+risk and confidence are in `allowed_risk_levels` and `allowed_confidence_levels` (low or medium risk
+with medium or high confidence by default, so high or critical risk or low confidence blocks a merge;
+empty lists disable merging). There are no author, deletion, path, or resource-kind gates: SRE fix PRs are reviewed and
+merged like any other, anywhere in the repository, including CI, Flux, storage, databases, and
+Sentinel itself. Read configuration before interpreting a decision.
 
 Sentinel represents GitHub-side eligibility as mergeable and a clean mergeable state; it does not
 independently enumerate every required status check. Discovery and retry read GitHub directly from the

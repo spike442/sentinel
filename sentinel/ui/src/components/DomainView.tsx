@@ -56,6 +56,13 @@ export function DomainView({
           </button>
         </header>
       )}
+      {domain === "sre" && (
+        <header className="domain-header">
+          <button className="action-button" onClick={onRefresh}>
+            <RefreshCw size={14} /> Refresh
+          </button>
+        </header>
+      )}
       {error && <p role="alert" className="error">{error}</p>}
       {graph ? (
         <StateMachine
