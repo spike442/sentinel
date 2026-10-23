@@ -1,6 +1,6 @@
 [project]
 name = "stonks-spark"
-version = "1.0.2"
+version = "1.0.0"
 requires-python = ">=3.10"
 dependencies = [
   "PyYAML>=6,<7",

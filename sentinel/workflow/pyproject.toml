@@ -1,6 +1,6 @@
 [project]
 name = "sentinel-workflow"
-version = "1.0.2"
+version = "1.0.0"
 requires-python = ">=3.12"
 dependencies = [
   "sentinel-core[knowledge-client,kafka,database,metrics,github]==1.0.0",
