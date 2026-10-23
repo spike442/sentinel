@@ -137,6 +137,7 @@ jobs:
           file: sentinel/${{ matrix.path }}/Dockerfile
           push: ${{ inputs.publish }}
           tags: ${{ env.IMAGE }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           sbom: ${{ inputs.publish }}
           provenance: ${{ inputs.publish && 'mode=max' || 'false' }}
           cache-from: type=gha,scope=${{ matrix.image }}
