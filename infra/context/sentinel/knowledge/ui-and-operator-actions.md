@@ -76,7 +76,7 @@ not resolve the upstream alert or undo a PR. Review Check now triggers
 discovery. Review Replay accepts blocked, failed, running, and fixing reviews: the workflow reads the PR from
 GitHub, records a merge that already happened, explains a closed PR on the review, and otherwise reviews its
 current revision again. Fix it appears only on blocked reviews: the reviewer receives the earlier attempts and
-the optional operator instruction, returns complete new contents of the files it changes, and checks the fixed
+the optional operator instruction, returns complete new contents of the files it changes (or deletes them), and checks the fixed
 revision; Sentinel pushes one commit to the PR's own branch only when the checks pass and the changes are
 repository-relative and credential-free, and the next discovery reviews the new head as another attempt. Fix it
 is declined, and the review stays blocked with the reason, when the PR is closed, changed since its review, or

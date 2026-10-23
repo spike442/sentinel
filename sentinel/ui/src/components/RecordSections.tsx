@@ -142,8 +142,8 @@ export function DiagnosisView({ diagnosis }: { diagnosis: Diagnosis }) {
       )}
       {diagnosis.proposed_changes?.map((change) => (
         <details className="nested" key={change.file_path}>
-          <summary>{change.file_path}</summary>
-          <Block value={change.content} />
+          <summary>{change.delete ? `${change.file_path} (deleted)` : change.file_path}</summary>
+          {!change.delete && <Block value={change.content} />}
         </details>
       ))}
       {Boolean(diagnosis.manual_actions?.length) && (

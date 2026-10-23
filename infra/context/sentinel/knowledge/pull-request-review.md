@@ -62,7 +62,7 @@ fork Sentinel cannot push to. Otherwise the review becomes `fixing` and PR Revie
 the reviewed head, its checks, the diff, the earlier attempts with their findings and failed checks, and the
 operator's instruction. With the repository's `actions/fix.md` prompt and a `read_file` tool limited to the
 checkout (refusing `.git`, paths outside it, files over `max_file_bytes`, and files with credential material),
-it returns each changed file's complete content, a summary, and a commit subject. The worker applies the
+it returns each changed file's complete content (or its deletion), a summary, and a commit subject. The worker applies the
 changes to the checkout and runs the checks again on the fixed revision against the base.
 
 The workflow's pure fix policy (`reviews/fix_policy.py`) declines a fix with no changes, a path outside the

@@ -22,4 +22,5 @@ Return only the requested structured fix:
 
 - `summary`: what changed and which failed checks and findings it addresses, or why nothing changed
 - `commit_message`: a one-line commit subject
-- `changes`: each changed file's repository-relative `file_path` and complete `content`
+- `changes`: each changed file's repository-relative `file_path` and complete `content`, or `delete`
+  set to true with empty `content` to delete it

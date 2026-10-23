@@ -10,6 +10,8 @@ def rejection(changes: list[ProposedChange]) -> str | None:
         parts = PurePosixPath(path)
         if not path or parts.is_absolute() or ".." in parts.parts:
             return f"Change path is not repository-relative: {path!r}."
+        if change.delete and change.content:
+            return f"Change deletes a file and also gives it content: {path}."
         if contains_secret(change.content):
             return f"Change content looks like credential material: {path}."
     return None

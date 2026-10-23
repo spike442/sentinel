@@ -31,7 +31,9 @@ not a completed repair. SRE returns the decision; Sentinel owns execution.
 
 Sentinel's incident fix publisher checks only what keeps agents away from secrets and the repository
 boundary: paths must be repository-relative and content must not match its built-in credential
-patterns. File changes carry paths and complete content; an empty PR title or body falls back to the
+patterns. File changes carry paths and complete content, or `delete` with empty content to remove an
+existing file (a directory is removed file by file, and a deletion that also carries content is rejected);
+the executor stages deletions in the checkout and sends them to GitHub as tree entries without a blob. An empty PR title or body falls back to the
 diagnosis summary and hypothesis. PR Review then reviews and merges the fix PR like any other. The SRE prompt
 requires secret-free changes. There are no path or resource-kind limits: a
 fix may change any file and kind in the repository. A rejected proposal becomes blocked

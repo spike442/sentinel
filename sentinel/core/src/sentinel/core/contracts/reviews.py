@@ -92,12 +92,13 @@ class FailedPrReview(BaseModel):
 
 
 class PrFix(BaseModel):
-    """The reviewer's fix of its own blocked review: complete new contents of each changed file."""
+    """The reviewer's fix of its own blocked review: complete new contents of each changed file, or its deletion."""
 
     summary: str = Field(description="What the fix changes and which findings it addresses.")
     commit_message: str = Field(description="A one-line commit subject for the fix.")
     changes: list[ProposedChange] = Field(
-        default_factory=list, description="Each changed file's complete new content; empty when it cannot be fixed."
+        default_factory=list,
+        description="Each changed file's complete new content or deletion; empty when it cannot be fixed.",
     )
 
 

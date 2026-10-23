@@ -92,6 +92,12 @@ class WorkspaceManager:
             if target is None:
                 output = f"{change.file_path} is not a file of this repository."
                 return [CheckResult(name="change paths", passed=False, output=output)]
+            if change.delete:
+                if not target.is_file():
+                    output = f"{change.file_path} deletes a file that does not exist."
+                    return [CheckResult(name="change paths", passed=False, output=output)]
+                target.unlink()
+                continue
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(change.content, encoding="utf-8")
         paths = [change.file_path for change in changes]

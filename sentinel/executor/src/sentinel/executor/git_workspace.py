@@ -90,21 +90,28 @@ class GitWorkspace:
         """
         root = path.resolve()
         contents: dict[str, str] = {}
+        deleted: list[str] = []
         try:
             for change in changes:
                 target = (path / change.file_path).resolve()
                 if root not in target.parents:
                     raise ValueError(f"change path escapes repository: {change.file_path}")
+                relative = target.relative_to(root).as_posix()
+                if change.delete:
+                    if not target.is_file():
+                        raise ValueError(f"change deletes a file that does not exist: {change.file_path}")
+                    target.unlink()
+                    deleted.append(relative)
+                    continue
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(change.content, encoding="utf-8")
-                relative = target.relative_to(root)
-                contents[relative.as_posix()] = change.content
-            git(["-C", str(path), "add", "--", *contents])
+                contents[relative] = change.content
+            git(["-C", str(path), "add", "--", *contents, *deleted])
             changed = git(["-C", str(path), "diff", "--cached", "--name-only"])
             if not changed.strip():
                 raise ValueError("the changes leave every file unchanged")
             git(["-C", str(path), "diff", "--cached", "--check"])
-            staged = git(["-C", str(path), "ls-files", "-z", "--stage", "--", *contents])
+            staged = git(["-C", str(path), "ls-files", "-z", "--stage", "--", *contents]) if contents else ""
         finally:
             git(["-C", str(path), "reset", "--hard", "--quiet"])
             git(["-C", str(path), "clean", "-fd", "--quiet"])
@@ -113,10 +120,12 @@ class GitWorkspace:
             if record:
                 entry, file_path = record.split("\t", 1)
                 modes[file_path] = entry.split(" ", 1)[0]
-        return [
+        written = [
             {"path": file_path, "mode": modes[file_path], "type": "blob", "content": content}
             for file_path, content in contents.items()
         ]
+        removed = [{"path": file_path, "mode": "100644", "type": "blob", "sha": None} for file_path in deleted]
+        return [*written, *removed]
 
     def _environment(self, repository: RepositoryIdentity) -> dict[str, str]:
         clone_url = urlparse(repository.clone_url)

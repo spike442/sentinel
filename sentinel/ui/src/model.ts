@@ -71,7 +71,7 @@ export type ToolBudget = {
   calls?: Record<string, number>;
   exhausted_tools?: string[];
 };
-type ProposedChange = { file_path: string; content: string };
+type ProposedChange = { file_path: string; content: string; delete?: boolean };
 export type CheckResult = { name: string; passed: boolean; output?: string };
 export type Diagnosis = {
   status?: string;

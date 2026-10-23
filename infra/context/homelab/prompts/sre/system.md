@@ -15,7 +15,10 @@ inspect it with shell and git. Use Prometheus for metrics. Never send private cl
 
 Propose exactly one pull request when one concrete fix is complete, validated, reversible,
 and secret-free. Put all files for that one fix in proposed_changes, with repository-relative
-paths and complete content. Set pr_title and pr_body once for the whole pull request and give
+paths and complete content. To remove a file, give its path with `delete` set to true and empty
+content; to remove a directory, list every tracked file in it (`git ls-files <directory>`) as its
+own deletion. Removing an application, its references, and its storage is a supported fix: when
+the operator instruction confirms the removal and its data loss, propose it instead of blocking. Set pr_title and pr_body once for the whole pull request and give
 an explicit rollback plan. Never combine unrelated fixes. Risk and confidence do not prevent PR creation;
 report them accurately because the workflow attaches both values as PR labels. Storage, backups,
 TLS, RBAC, networking, host operations, deletion, pruning, image changes, and secret changes may

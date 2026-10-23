@@ -82,8 +82,8 @@ export function ReviewAttemptResult({ result }: { result: AttemptResult }) {
           <h4>Changed files</h4>
           {result.changes?.map((change) => (
             <details className="nested" key={change.file_path}>
-              <summary>{change.file_path}</summary>
-              <Block value={change.content} />
+              <summary>{change.delete ? `${change.file_path} (deleted)` : change.file_path}</summary>
+              {!change.delete && <Block value={change.content} />}
             </details>
           ))}
         </>
