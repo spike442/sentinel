@@ -10,7 +10,7 @@
         tasks_from: install-client
 
 - name: Install the S3 client
-  hosts: s3
+  hosts: storage
   gather_facts: false
   tasks:
     - name: Install the S3 client
@@ -28,7 +28,7 @@
         name: sql
 
 - name: Initialize S3 context
-  hosts: s3
+  hosts: storage
   gather_facts: false
   tasks:
     - name: Initialize S3 context

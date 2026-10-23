@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/name: sentinel
+{{ include "sentinel.standardLabels" . | indent 4 }}
+    app.kubernetes.io/role: ui
+  name: sentinel-ui-domains
+  namespace: {{ .Release.Namespace }}
+data:
+  domains.json: {{ dict "domains" .Values.console.domains | toJson | quote }}

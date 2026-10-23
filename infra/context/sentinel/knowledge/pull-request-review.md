@@ -4,15 +4,18 @@ Repository: `sentinel`. Scope: revision isolation, deterministic merge decisions
 
 ## Discovery and revision identity
 
-Sentinel polls only the repositories configured in `repositories.yaml` (`infra/chart/sentinel/config/common/repositories.yaml`). Its PR-review
-domain owns the configured polling interval and the UI's Check now operation. Knowledge source registration is
+Sentinel polls only the repositories configured in `repositories.yaml` (`infra/chart/sentinel/config/common/repositories.yaml`). Its Reviews
+workflow, part of the SRE domain and run by the PR Review agent, owns the configured polling interval and the UI's Check now operation. Knowledge source registration is
 independent of this repository allowlist and does not grant merge authority.
 
 A review record is one pull request (owner, repository, number); each review of a revision, operator replay,
 and fix is an attempt kept on it, and the record's base SHA, head SHA, and decision show the latest attempt.
 Discovery acknowledges an eligible pull request before dispatch and schedules a review when the PR is new,
 still acknowledged, or blocked or failed at a different base or head than it last reviewed. The next scheduled
-or manually triggered scan can pick up an acknowledged one. A new base or head is always reviewed again,
+or manually triggered scan can pick up an acknowledged one. When the PR is an SRE incident's fix (an incident
+recorded its URL), acknowledging it attaches the review to that incident once (`incident_id` on the review,
+`review_id` on the incident), and every final review status is reported to the incident's timeline; reviews of
+any other PR stand alone. A new base or head is always reviewed again,
 never approved by an earlier attempt. UI Replay accepts blocked, failed, running, and fixing reviews and
 reviews the PR's current revision as a new attempt, with the operator's optional instruction.
 
@@ -23,9 +26,10 @@ out the PR head detached. It gathers a bounded diff and currently runs `git diff
 the built-in deterministic check. That check detects whitespace problems; it does not compile
 the application, run its test suite, or validate all Kubernetes/chart semantics.
 
-Mandatory S3 instructions consist of a shared system prompt and a repository-specific review
-action. A review's only tool is `search_knowledge` (a fix adds `read_file`); PR Review has no Kubernetes API access (no RBAC, no
-kubeconfig, no service account token), so it judges a change from the repository. The model receives
+Mandatory S3 instructions consist of the repository's system prompt, its review or fix action, and one
+`actions/<tool>.md` per tool (`search_knowledge.md`, and `read_file.md` for a fix), in that order. A review's only tool is `search_knowledge` (a fix adds `read_file`); the review agent runs in the SRE process (the
+`sre` service account and its read-only `sre-read` ClusterRole, kubeconfig, and egress), but the reviewer has no
+cluster tool, so it judges a change from the repository. The model receives
 the diff, PR metadata, retrieved knowledge, the last five finished attempts on the PR, and for a replay the
 operator's instruction (`actions/replay.md`), then returns structured risk, confidence, summary, and findings. Tool activity is PR-scoped audit.
 Untrusted PR text is not permission to execute arbitrary code or expose credentials.
@@ -55,7 +59,7 @@ merged reviewed revision rather than blindly merging again.
 
 ## Fix it
 
-An operator can ask the reviewer to fix a `blocked` review from the UI (`POST /api/pr-reviews/{id}/fix`
+An operator can ask the reviewer to fix a `blocked` review from the UI (`POST /api/sre/reviews/records/{id}/actions/fix`
 with an optional prompt). The workflow first reads the PR from GitHub and declines, keeping the review
 blocked with the reason, when it is merged (recorded instead), closed, changed since its review, or from a
 fork Sentinel cannot push to. Otherwise the review becomes `fixing` and PR Review receives a `fix` command:
@@ -73,10 +77,10 @@ GitHub App on exactly the reviewed head, fast-forwarding the PR's own branch wit
 next discovery reviews it once GitHub reports it clean, applying the same merge policy as any revision. A
 failed agent run or push fails the review. Pushing to a Renovate branch makes Renovate stop rebasing it.
 
-Sources: `sentinel/workflow/src/sentinel/workflow/reviews/`, `infra/chart/sentinel/config/common/repositories.yaml`,
-`sentinel/pr-review/src/sentinel/agents/pr_review/run.py`,
-`sentinel/pr-review/src/sentinel/agents/pr_review/policy.py`,
-`sentinel/pr-review/src/sentinel/agents/pr_review/workspace.py`,
-`sentinel/pr-review/src/sentinel/agents/pr_review/agent.py`, `sentinel/executor/src/sentinel/executor/git_workspace.py`,
+Sources: `sentinel/workflow/src/sentinel/workflow/sre/reviews/`, `infra/chart/sentinel/config/common/repositories.yaml`,
+`sentinel/sre/src/sentinel/sre/reviews/run.py`,
+`sentinel/sre/src/sentinel/sre/reviews/policy.py`,
+`sentinel/sre/src/sentinel/sre/reviews/workspace.py`,
+`sentinel/agents/src/sentinel/agents/sre/review/agent.py`, `sentinel/executor/src/sentinel/executor/git_workspace.py`,
 `sentinel/executor/src/sentinel/executor/github.py`,
 `infra/chart/sentinel/config/pr-review.yaml`, `infra/context/<repository>/prompts/pr-review/actions/`.

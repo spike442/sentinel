@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/name: stonks-spark
+{{ include "stonks.standardLabels" . | indent 4 }}
+  name: stonks-spark-runtime
+  namespace: {{ .Release.Namespace }}
+rules:
+- apiGroups: [""]
+  resources:
+  - pods
+  - services
+  - configmaps
+  - persistentvolumeclaims
+  verbs: [get, list, watch, create, delete, patch]

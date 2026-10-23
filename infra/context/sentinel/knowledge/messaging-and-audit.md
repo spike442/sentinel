@@ -1,6 +1,6 @@
 # Sentinel messaging, delivery, and audit
 
-Alertmanager's webhook receiver posts notifications to the API (`POST /api/events/alertmanager`), which publishes
+Alertmanager's webhook receiver posts notifications to the API (`POST /api/sre/events/alertmanager`), which publishes
 each alert in them to `sentinel.cluster.alerts` keyed by its fingerprint; they are consumed by the incident workflow
 in sentinel-workflow.
 API actions and scheduled PR discovery publish `WorkflowRequest`s, each naming its `domain`, to
@@ -8,14 +8,12 @@ API actions and scheduled PR discovery publish `WorkflowRequest`s, each naming i
 workflow claims and prepares each request using the incident or review state machine,
 then sends the prepared command to its agent topic, or a side effect to `sentinel.executor.commands`.
 Agents publish returns to `sentinel.sre.returns` or `sentinel.pr-review.returns`; sentinel-executor publishes every
-`ExecutorReturn` to `sentinel.executor.returns`, routed by its `domain`. The workflow applies returns and publishes
-committed domain snapshots to `sentinel.workflow.outcomes`. When an event moves a record into a terminal status
+`ExecutorReturn` to `sentinel.executor.returns`, routed by its `domain`. The workflow applies returns
+to PostgreSQL. When an event moves a record into a terminal status
 (incidents: `awaiting`, `blocked`, `failed`, `resolved`; reviews: `blocked`, `failed`, `merged`), the workflow posts
 it to Discord itself; a failed notification is logged and changes nothing. The webhook URL is the credential, so the
 workflow redacts it from `httpx` request logs (`redact_logged_secrets` in `sentinel/core/src/sentinel/core/observability/logging.py`).
-Incidents Sentinel never investigated do not notify; Spark archives every snapshot as its own
-object under its workflow ID (`.../workflow_id=<id>/<partition>-<offset>.jsonl`), so a workflow keeps
-its whole history and a replayed record rewrites only itself. Knowledge indexing reads only the S3 knowledge files, not these records.
+Incidents Sentinel never investigated do not notify. Knowledge indexing reads only the S3 knowledge files, not these records.
 
 Kafka offsets are committed after the handler succeeds. A crash can therefore repeat a
 command or return. Domain workflow IDs fence stale returns, and the state machines
@@ -24,7 +22,7 @@ reconciles GitHub merges and fix submissions before repeating them. A repeated m
 return is recognized by workflow ID and claim time.
 
 Malformed events are logged and skipped. An event whose handler fails marks the incident or review
-its workflow owns as failed, then is logged and skipped; consumers do not retry, and an operator
+its `record_id` names as failed when that event's workflow owns it, then is logged and skipped; consumers do not retry, and an operator
 replays the record from the UI. A periodic workflow pass fails incident and review workflows
 that remain acknowledged or processing beyond their time limits. Kafka is a delivery
 log; PostgreSQL holds operator-visible status and history.
@@ -40,5 +38,5 @@ the evidence it already gathered, so reaching the budget never fails the run. Ev
 action and logs a warning with the incident or pull request. Keep credentials out of commands, results, and logs.
 
 Sources: `sentinel/workflow/src/sentinel/workflow/runner.py`, `sentinel/executor/src/sentinel/executor/`, `sentinel/core/src/sentinel/core/kafka/`,
-`sentinel/workflow/src/sentinel/workflow/incidents/`, `sentinel/workflow/src/sentinel/workflow/reviews/`, and
+`sentinel/workflow/src/sentinel/workflow/sre/incidents/`, `sentinel/workflow/src/sentinel/workflow/sre/reviews/`, and
 `sentinel/core/src/sentinel/core/persistence/postgres.py`.

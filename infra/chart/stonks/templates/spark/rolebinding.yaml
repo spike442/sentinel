@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: stonks-spark
+{{ include "stonks.standardLabels" . | indent 4 }}
+  name: stonks-spark-runtime
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: stonks-spark-runtime
+subjects:
+- kind: ServiceAccount
+  name: stonks-spark
+  namespace: {{ .Release.Namespace }}

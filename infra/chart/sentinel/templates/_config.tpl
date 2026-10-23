@@ -1,17 +1,12 @@
 {{- define "sentinel.configFiles" -}}
 {{- $values := .Values -}}
 {{- $sre := $values.agents.sre.enabled -}}
-{{- $review := (index $values.agents "pr-review").enabled -}}
+{{- $review := $sre -}}
 {{- $topicNames := dict -}}
 {{- range $key, $topic := $values.kafka.topics -}}
 {{- $_ := set $topicNames $key $topic.name -}}
 {{- end -}}
-{{- $agents := list -}}
-{{- range $agent := keys $values.agents | sortAlpha -}}
-{{- if (index $values.agents $agent).enabled -}}
-{{- $agents = append $agents $agent -}}
-{{- end -}}
-{{- end -}}
+{{- $agents := ternary (list "pr-review" "sre") list $sre -}}
 {{- $sreRun := int $values.agents.sre.runTimeoutSeconds -}}
 {{- $reviewRun := int (index $values.agents "pr-review").runTimeoutSeconds -}}
 {{- $executorAction := int $values.executor.actionTimeoutSeconds -}}

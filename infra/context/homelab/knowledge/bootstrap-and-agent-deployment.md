@@ -21,20 +21,20 @@ GitOps support resources, PostgreSQL database and roles, and its Kafka users and
 Flux dependencies connect prerequisite Kustomizations to the application; keep setup with its
 owner rather than introducing separate platform applications for app-specific credentials.
 
-Sentinel's main app serves both backend and built UI. SRE and PR Review Deployments consume
-Kafka commands; Workflow consumes incident and review requests and returns. Service accounts,
+Sentinel's main app serves both backend and built UI. The `sentinel-sre` Deployment (one container
+running both SRE agents) consumes Kafka commands; Workflow consumes incident and review requests and returns. Service accounts,
 ClusterRoles, projected tokens, kubeconfig mounts, and HOME are deployment concerns.
 Both agent roles are read-only. sentinel-executor's ClusterRole may delete jobs and pods, restart
 workloads, and patch Flux objects for approved manual actions, and grants no Secrets, RBAC, or
 CRDs; none of these permission sets should be called cluster-admin.
 The chart in `infra/chart/sentinel/` renders Sentinel's API, Workflow, sentinel-executor, knowledge API, process
-configuration, Spark streaming, SRE, and PR Review in the agents namespace. Homelab's
+configuration, SRE, and PR Review in the agents namespace. Homelab's
 `sentinel/app` keeps the Flux HelmRelease, OCIRepository, and the centralized ExternalSecret
 definitions; `sentinel/infra` keeps the cross-namespace resources Sentinel needs: PostgreSQL database and roles,
 and Kafka users with their ACLs. Its values point to external services
 and name existing Secrets, database roles, Kafka users, and consumer groups; the Sentinel chart creates its
 own Kafka topics. The chart
-renders those values into Sentinel and Spark configuration; other site configuration lives in the
+renders those values into Sentinel configuration; other site configuration lives in the
 Sentinel chart's `config/` files. Namespace-local Secret projections are still needed
 for the database and messaging operators.
 
@@ -44,8 +44,7 @@ Before rollout, verify required CRDs/operators and SecretStore health, then run 
 `task deploy` once the PostgreSQL database and roles and the ClickHouse server exist. Verify
 the Sentinel chart's Kafka request, command, and return topics, Homelab's Kafka users/ACLs, prompt objects/checksum,
 the knowledge image with its pinned model, and image tags.
-Workflow outcome archiving additionally requires the `sentinel.workflow.outcomes`
-topic, Sentinel publish access, and Spark read access. Database creation is not schema initialization. Prompt upload is not knowledge
+Database creation is not schema initialization. Prompt upload is not knowledge
 indexing. Image publication is not Flux deployment.
 
 After GitOps reconciliation, check dependency conditions, Deployment rollout, pod events,
@@ -54,9 +53,9 @@ and UI API access. Test one real event before broad replay. Agent images run as 
 Kafka consumers. Current image versions and replicas must be read
 from manifests, not this document.
 
-Sentinel API, Workflow, sentinel-executor, and Spark use different subsets of the `sentinel-secrets`
-ExternalSecret. Do not remove a key merely because one Deployment does not consume it: the
-Spark S3 archive or a worker may still require it. The local SQL task reads its database
+Sentinel API, Workflow, sentinel-executor, and the agents use different subsets of the `sentinel-secrets`
+ExternalSecret. Do not remove a key merely because one Deployment does not consume it: another
+Deployment or a worker may still require it. The local SQL task reads its database
 passwords directly from 1Password. Compare
 each `secretKeyRef` and projected volume item with the ExternalSecret and the corresponding
 settings or entrypoint. SRE and PR Review credentials are projected into the agents namespace

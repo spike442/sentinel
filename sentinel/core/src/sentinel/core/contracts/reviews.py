@@ -83,14 +83,6 @@ class DecidedPrReview(BaseModel):
     tool_budget: ToolBudget = Field(default_factory=ToolBudget)
 
 
-class FailedPrReview(BaseModel):
-    status: Literal["failed"] = "failed"
-    pull_request: PullRequest
-    failure: str
-    audit_actions: list[AuditAction] = Field(default_factory=list)
-    tool_budget: ToolBudget = Field(default_factory=ToolBudget)
-
-
 class PrFix(BaseModel):
     """The reviewer's fix of its own blocked review: complete new contents of each changed file, or its deletion."""
 
@@ -111,4 +103,4 @@ class ProposedPrFix(BaseModel):
     tool_budget: ToolBudget = Field(default_factory=ToolBudget)
 
 
-PrReviewOutcome = Annotated[DecidedPrReview | FailedPrReview | ProposedPrFix, Field(discriminator="status")]
+PrReviewOutcome = Annotated[DecidedPrReview | ProposedPrFix, Field(discriminator="status")]

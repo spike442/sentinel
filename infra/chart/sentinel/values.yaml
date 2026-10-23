@@ -11,17 +11,11 @@ images:
   sre:
     repository: ghcr.io/spike442/sentinel-sre
     tag: ""
-  prReview:
-    repository: ghcr.io/spike442/sentinel-pr-review
-    tag: ""
   executor:
     repository: ghcr.io/spike442/sentinel-executor
     tag: ""
   knowledge:
     repository: ghcr.io/spike442/sentinel-knowledge
-    tag: ""
-  spark:
-    repository: ghcr.io/spike442/sentinel-spark
     tag: ""
 
 secrets:
@@ -32,14 +26,10 @@ agents:
     enabled: true
     runTimeoutSeconds: 1800
   pr-review:
-    enabled: true
     runTimeoutSeconds: 1800
 
 executor:
   actionTimeoutSeconds: 900
-
-spark:
-  enabled: false
 
 postgres:
   host: postgres0-rw.database.svc.cluster.local
@@ -58,7 +48,6 @@ kafka:
   consumerGroup: sentinel
   users:
     sre: sentinel-sre
-    pr-review: sentinel-pr-review
     executor: sentinel-executor
   cluster: kafka
   topicNamespace: messaging
@@ -67,7 +56,6 @@ kafka:
   topics:
     cluster_alerts: {name: sentinel.cluster.alerts, partitions: 1}
     workflow_requests: {name: sentinel.workflow.requests, partitions: 3}
-    outcomes: {name: sentinel.workflow.outcomes, partitions: 1}
     sre_commands: {name: sentinel.sre.commands, partitions: 3}
     sre_returns: {name: sentinel.sre.returns, partitions: 3}
     pr_review_commands: {name: sentinel.pr-review.commands, partitions: 3}
@@ -92,6 +80,15 @@ networkPolicy:
   storageNamespace: storage
   messagingNamespace: messaging
   ciliumEgress: false
+
+console:
+  domains:
+  - id: sre
+    api: /api/sre
+    icon: kubernetes
+  - id: stonks
+    api: /api/stonks
+    icon: bull
 
 route:
   hostname: sentinel.example.test

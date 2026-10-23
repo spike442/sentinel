@@ -1,0 +1,4 @@
+storage:
+  raw_prefix: raw
+  universe_prefix: universe
+  reference_prefix: reference

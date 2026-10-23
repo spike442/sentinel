@@ -22,9 +22,6 @@ spec:
     - podSelector:
         matchLabels:
           app.kubernetes.io/name: sre
-    - podSelector:
-        matchLabels:
-          app.kubernetes.io/name: pr-review
     ports:
     - port: 9092
       protocol: TCP

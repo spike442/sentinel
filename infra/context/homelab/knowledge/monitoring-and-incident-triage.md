@@ -11,7 +11,7 @@ Grafana displays data. Fluent Bit ships logs to VictoriaLogs. Flux notifications
 controller-event path; they are not the same as Prometheus alert evaluation.
 
 Alertmanager's `sentinel` webhook receiver posts every alert, ungrouped and with resolutions, to the Sentinel API
-(`sentinel-api`, `/api/events/alertmanager`), which publishes each alert to `sentinel.cluster.alerts`; Alertmanager
+(`sentinel-api`, `/api/sre/events/alertmanager`), which publishes each alert to `sentinel.cluster.alerts`; Alertmanager
 holds no Kafka credentials. Alertmanager itself does not post to Discord. Sentinel does: when an incident or review
 reaches a terminal status, sentinel-executor posts one message through the `DISCORD_WEBHOOK_URL` webhook.
 Sentinel ingests alerts, dispatches investigations, and stores decisions.

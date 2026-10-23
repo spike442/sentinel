@@ -4,15 +4,15 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, model_validator
 from sentinel.core.domain import AgentDomain
 from sentinel.core.errors import SentinelError
+from sentinel.core.observability.audit import AuditAction, ToolBudget
 
 
 class KafkaTopic(StrEnum):
     CLUSTER_ALERTS = "cluster_alerts"
     WORKFLOW_REQUESTS = "workflow_requests"
-    OUTCOMES = "outcomes"
 
     SRE_COMMANDS = "sre_commands"
     SRE_RETURNS = "sre_returns"
@@ -38,12 +38,6 @@ class KafkaMessage:
     commit: Callable[[], None] = field(compare=False)
 
 
-class WorkflowOutcome(BaseModel):
-    domain: AgentDomain
-    workflow_id: str
-    record: dict[str, Any]
-
-
 class RequestKind(StrEnum):
     INCIDENT = "incident"
     PR_REVIEW = "review"
@@ -55,25 +49,57 @@ class RequestKind(StrEnum):
     DELETE = "delete"
 
 
-class WorkflowRequest(BaseModel):
+class RecordMessage(BaseModel):
+    """A message about one incident or review record, named by ``record_id``, within one workflow run.
+
+    Every message the workflow consumes besides a cluster alert carries both ids, so a message whose handling
+    fails marks its record failed without knowing the domain's payload.
+    """
+
+    workflow_id: str
+    record_id: str | None = None
+
+
+RECORD_TOPICS = frozenset(
+    {
+        KafkaTopic.WORKFLOW_REQUESTS,
+        KafkaTopic.SRE_RETURNS,
+        KafkaTopic.PR_REVIEW_RETURNS,
+        KafkaTopic.EXECUTOR_RETURNS,
+    }
+)
+
+
+class RunFailure(BaseModel):
+    error: str
+    audit_actions: list[AuditAction] = Field(default_factory=list)
+    tool_budget: ToolBudget | None = None
+
+
+class WorkflowRequest(RecordMessage):
     domain: AgentDomain
     kind: RequestKind
-    workflow_id: str
     payload: dict[str, Any] = Field(default_factory=dict)
 
 
-class AgentCommand(BaseModel):
+class AgentCommand(RecordMessage):
+    record_id: str
     kind: RequestKind
-    workflow_id: str
     payload: dict[str, Any]
 
 
-class AgentReturn(BaseModel):
+class AgentReturn(RecordMessage):
+    record_id: str
     kind: RequestKind
-    workflow_id: str
     request: dict[str, Any]
     result: dict[str, Any] | None = None
-    error: str | None = None
+    failure: RunFailure | None = None
+
+    @model_validator(mode="after")
+    def carries_a_result_or_a_failure(self) -> "AgentReturn":
+        if (self.result is None) == (self.failure is None):
+            raise ValueError("an agent return carries either a result or a failure")
+        return self
 
 
 class ExecutorAction(StrEnum):
@@ -83,11 +109,11 @@ class ExecutorAction(StrEnum):
     RUN_COMMAND = "run-command"
 
 
-class ExecutorEnvelope(BaseModel):
+class ExecutorEnvelope(RecordMessage):
+    record_id: str
     action: ExecutorAction
     domain: AgentDomain
-    workflow_id: str
-    context: dict[str, Any]
+    context: dict[str, Any] = Field(default_factory=dict)
 
 
 class ExecutorCommand(ExecutorEnvelope):

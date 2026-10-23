@@ -1,0 +1,19 @@
+[project]
+name = "stonks-core"
+version = "1.0.0"
+requires-python = ">=3.12"
+dependencies = [
+  "boto3>=1.35,<2",
+  "httpx>=0.28,<1",
+  "pydantic>=2.10,<3",
+  "pydantic-settings[yaml]>=2.7,<3",
+]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = true
+include = ["stonks.core*"]

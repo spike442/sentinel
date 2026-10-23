@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: stonks-api
+{{ include "stonks.standardLabels" . | indent 4 }}
+  name: stonks-api
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app.kubernetes.io/name: stonks-api
+  ports:
+  - name: http
+    port: 8090
+    targetPort: http

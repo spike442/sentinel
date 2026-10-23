@@ -15,7 +15,7 @@ tables. These are different steps: a successful database resource does not imply
 has been applied. Worker agents do not need PostgreSQL credentials.
 
 Sentinel's PostgreSQL tables store operator-facing incident and review state. Kafka topics
-carry requests, commands, returns, and outcome events.
+carry requests, commands, and returns.
 
 ## ClickHouse and local embeddings
 
@@ -52,11 +52,8 @@ Consumer group identity, topic permissions, broker connectivity, offsets, and pu
 confirmation are separate concerns. Kafka durability does not make a PostgreSQL write and a
 message publication atomic. Topic retention is not an indefinite incident archive.
 
-Sentinel publishes saved incident and review records to `sentinel.workflow.outcomes` when a
-workflow finishes. An operator-managed Spark query reads that topic and archives the
-messages to S3. It does not write to ClickHouse. Sentinel remains responsible for canonical
-incident state. Publishing is not atomic with the database commit;
-monitor failed result handling for missing outcome messages.
+PostgreSQL holds the canonical incident and review state; Sentinel publishes no outcome stream and keeps no
+separate archive of its records.
 
 ## Object storage
 

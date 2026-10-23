@@ -24,9 +24,7 @@ runs:
         directory="$RUNNER_TEMP/sentinel-config"
         mkdir -p "$directory"
         helm template sentinel infra/chart/sentinel --namespace agents \
-          --values infra/chart/sentinel/ci/spark-values.yaml \
           --show-only templates/common/config.yaml \
-          --show-only templates/spark/configmap.yaml \
           | yq ea -N '.data | to_entries | .[] | .key + "\t" + (.value | @base64)' \
           | while IFS=$'\t' read -r name content; do base64 -d <<< "$content" > "$directory/$name"; done
         echo "SENTINEL_CONFIG_DIR=$directory" >> "$GITHUB_ENV"

@@ -26,7 +26,7 @@ and `kafka.topicRetentionMs`), annotated to survive an uninstall.
 Fix commits are created through the GitHub API with GitHub App installation tokens, so GitHub signs them
 as the App and there is no SSH deploy or signing key. The platform shares one S3
 credential, `S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY` from the `sentinel` item, for knowledge,
-Spark, SRE and PR Review prompts, and `task deploy`. The knowledge service owns read-only
+SRE and PR Review prompts, and `task deploy`. The knowledge service owns read-only
 PostgreSQL and ClickHouse credentials for indexing and retrieval. SRE and PR Review own their
 model and Kafka credentials.
 All Sentinel credentials live in the single 1Password item `sentinel`, and each `sentinel-secrets` key matches its
@@ -40,24 +40,27 @@ process through `PromptStore`; restart a worker to pick up an uploaded prompt ch
 Knowledge indexing has a separate lifecycle from prompt refresh.
 
 HOME, KUBECONFIG, and mounted service-account material belong in the container/deployment
-environment. Only SRE, PR Review, and sentinel-executor pods mount a service-account token; the API
-and workflow pods do not. The agents' kubeconfigs grant only their read-only RBAC;
+environment. Only the SRE pod (both agents) and the sentinel-executor pod mount a service-account token; the API
+and workflow pods do not. The SRE pod runs as the `sre` service account, whose kubeconfig grants only the read-only `sre-read` ClusterRole;
 sentinel-executor's grants only the manual-action operations of its `sentinel-executor` ClusterRole. Workers use internal cluster Services, not public ingress.
 
 ## Build and release
 
 CI and Publish call one reusable workflow, `sentinel.yml`; Publish sets `publish: true`. Every run
-checks Python (format, lint, startup tests), the UI build, and each chart values file in
-`infra/chart/sentinel/ci/`, then builds all eight images (api, ui, workflow, sre, pr-review, executor,
-knowledge, spark); CI only builds them, so every release is built from the same full set. Publish pushes and
-signs every image, publishes the chart at the release version, then tags the released commit
+checks Python (format, lint, startup tests), the UI build, the Stonks Airflow DAG import, and each chart values file
+of both charts (`infra/chart/sentinel/` and `infra/chart/stonks/`), then builds all ten images (`sentinel-api`,
+`sentinel-ui`, `sentinel-workflow`, `sentinel-sre` (both SRE agents' workers), `sentinel-executor`, `sentinel-knowledge`,
+`stonks-api`, `stonks-ingest`, `stonks-dividends`, `stonks-spark`); CI only builds them, so every release is built
+from the same full set. Publish pushes and signs every image, publishes both charts at the release version (Sentinel's as
+`sentinel-<module>` images and `oci://ghcr.io/spike442/charts/sentinel`, Stonks' under the Sentinel namespace as
+`ghcr.io/spike442/sentinel/stonks-<module>` images and `oci://ghcr.io/spike442/charts/sentinel/stonks`), then tags the released commit
 `sentinel-<version>`, moving the tag when the same version is republished. After tagging, Publish bumps the
-project, every workspace member, `uv.lock`, and the chart to the next selected version, commits that preparation
+project, every workspace member, `uv.lock`, and both charts to the next selected version, commits that preparation
 to the released branch, and notifies Homelab Renovate. The release starts from the current version in every
 project, `uv.lock`, and the chart. The `setup-sentinel` composite action installs uv, Python, and the locked workspace.
 Quality is reporting only and never blocks CI or Publish: it runs the Python and UI checks behind the
 badge and, outside pull requests, scans every image with Trivy (HIGH and CRITICAL with a fix) and
-uploads the results to GitHub code scanning under the `image-<module>` categories. The Python version
+uploads the results to GitHub code scanning under the `image-<image>` categories. The Python version
 comes from `sentinel/pyproject.toml`; publication creates one Sentinel Git tag and versioned images.
 An existing release tag is not silently moved to a different commit.
 
@@ -65,12 +68,7 @@ Each deployable module has its own image. Every workload pulls its image on each
 (`imagePullPolicy: Always`), so a node never keeps running an older image cached under a reused tag. The UI image is nginx serving the built React app; one workflow image
 runs one Deployment for both enabled workflows. Each agent and sentinel-executor image installs only its module dependencies. The knowledge image
 includes the pinned local model.
-The Spark module runs a separate image. Its Python dependencies come from the workspace lockfile,
-while the pinned Apache Spark base image supplies PySpark. The image also bakes in the Kafka
-connector jars (`spark-sql-kafka`, its token provider, `kafka-clients`, and `commons-pool2`), each
-pinned by checksum, so the streaming job resolves nothing from Maven at runtime. It reads the bundled
-`logging.yaml`, `kafka.yaml`, `s3.yaml`, and `spark.yml`; it does not scan
-unrelated configuration files. Dotfiles own workstation CLI tools; CI installs its pinned Helm
+Sentinel runs no Spark; Spark belongs to Stonks only (`stonks-spark`, the daily bars batch). Dotfiles own workstation CLI tools; CI installs its pinned Helm
 version directly, and each Docker image installs only the CLI tools it needs. Each module's
 `pyproject.toml` declares its direct runtime dependencies. CLI availability and Python
 dependency installation are separate prerequisites. The root Taskfile coordinates setup,
@@ -96,6 +94,6 @@ reviewing documentation. Never log settings objects or decrypted secret values.
 
 Sources: `.github/workflows/`, `.github/actions/`, `Taskfile.yml`,
 `sentinel/*/Dockerfile`,
-`sentinel/sre/src/sentinel/agents/sre/settings.py`, `sentinel/pr-review/src/sentinel/agents/pr_review/settings.py`,
-`sentinel/core/src/sentinel/core/config/`, `sentinel/api/src/sentinel/api/config.py`, and
+`sentinel/sre/src/sentinel/sre/incidents/settings.py`, `sentinel/sre/src/sentinel/sre/reviews/settings.py`,
+`sentinel/core/src/sentinel/core/config/`, `sentinel/console/api/src/sentinel/api/config.py`, and
 `sentinel/core/src/sentinel/core/config/workflow.py`.

@@ -11,11 +11,12 @@ from sentinel.core.kafka.contracts import (
     ExecutorCommand,
     KafkaTopic,
     RequestKind,
+    RunFailure,
     WorkflowRequest,
 )
-from sentinel.core.kafka.producer import publish, publish_outcome
-from sentinel.core.persistence.queries import RecordReader
+from sentinel.core.kafka.producer import publish
 from sentinel.workflow.discord import DiscordWebhook
+from sentinel.workflow.repository import DomainRecords
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class DomainMessages:
         agent_topic: KafkaTopic,
         agent_kind: RequestKind,
         *,
-        records: RecordReader,
+        records: DomainRecords,
         describe: Callable[[dict[str, Any]], str],
         discord: DiscordWebhook,
     ):
@@ -40,37 +41,44 @@ class DomainMessages:
         self.describe = describe
         self.discord = discord
 
-    def command_agent(self, workflow_id: str, prepared: BaseModel) -> None:
+    def command_agent(self, record_id: str, workflow_id: str, prepared: BaseModel) -> None:
         payload = prepared.model_dump(mode="json")
-        command = AgentCommand(kind=self.agent_kind, workflow_id=workflow_id, payload=payload)
+        command = AgentCommand(kind=self.agent_kind, record_id=record_id, workflow_id=workflow_id, payload=payload)
         publish(self.settings, self.agent_topic, workflow_id, command)
 
     def command_executor(
-        self, action: ExecutorAction, workflow_id: str, payload: BaseModel, context: BaseModel | None = None
+        self,
+        action: ExecutorAction,
+        record_id: str,
+        workflow_id: str,
+        payload: BaseModel,
+        *,
+        context: BaseModel | None = None,
     ) -> None:
         payload_json = payload.model_dump(mode="json")
         context_json = context.model_dump(mode="json") if context is not None else {}
         command = ExecutorCommand(
             action=action,
             domain=self.domain,
+            record_id=record_id,
             workflow_id=workflow_id,
             payload=payload_json,
             context=context_json,
         )
         publish(self.settings, KafkaTopic.EXECUTOR_COMMANDS, workflow_id, command)
 
-    def schedule(self, kind: RequestKind, workflow_id: str, payload: BaseModel | None = None) -> None:
+    def schedule(
+        self, kind: RequestKind, workflow_id: str, payload: BaseModel | None = None, *, record_id: str | None = None
+    ) -> None:
         fields = payload.model_dump(mode="json") if payload is not None else {}
-        request = WorkflowRequest(domain=self.domain, kind=kind, workflow_id=workflow_id, payload=fields)
+        request = WorkflowRequest(
+            domain=self.domain, kind=kind, record_id=record_id, workflow_id=workflow_id, payload=fields
+        )
         publish(self.settings, KafkaTopic.WORKFLOW_REQUESTS, workflow_id, request)
 
-    def announce_outcome(self, entity_id: str, workflow_id: str, *, require_owner: bool = True) -> None:
-        current = self.records.get(entity_id)
-        if current is None:
-            return
-        if require_owner and current["workflow_id"] != workflow_id:
-            return
-        publish_outcome(self.settings, self.domain, workflow_id, current)
+    def fail(self, record_id: str, workflow_id: str, failure: RunFailure | str) -> None:
+        run_failure = RunFailure(error=failure) if isinstance(failure, str) else failure
+        self.records.fail(record_id, workflow_id, run_failure)
 
     def notify(self, entity_id: str) -> None:
         try:

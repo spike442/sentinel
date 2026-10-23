@@ -1,15 +1,33 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Protocol
 
+from sentinel.core.kafka.contracts import RunFailure
 from sentinel.core.persistence.postgres import PostgresDatabase, apply_event
 from sentinel.core.state.outcomes import Accepted
+
+
+def failure_trail(failure: RunFailure) -> tuple[tuple[dict[str, Any], ...], dict[str, Any] | None]:
+    actions = tuple(action.model_dump(mode="json") for action in failure.audit_actions)
+    budget = None if failure.tool_budget is None else failure.tool_budget.model_dump(mode="json")
+    return actions, budget
+
+
+class DomainRecords(Protocol):
+    def get(self, record_id: str) -> dict[str, Any] | None: ...
+
+    def list(self, limit: int, status: str | None = None, *, oldest_first: bool = False) -> list[dict[str, Any]]: ...
+
+    def fail(self, record_id: str, workflow_id: str, failure: RunFailure) -> None: ...
+
+    def delete(self, record_id: str) -> None: ...
 
 
 class TransitionRepository(ABC):
     """Apply events to rows of ``model``; ``new_values`` gives a missing row's columns when an event creates it.
 
     ``on_terminal`` runs after the commit whenever an event moves a row into one of the ``terminal`` statuses.
+    Every domain fails a record owned by a workflow with ``fail`` and removes one with ``delete``.
     """
 
     database: PostgresDatabase
@@ -21,6 +39,14 @@ class TransitionRepository(ABC):
 
     @abstractmethod
     def new_values(self, source: Any) -> dict[str, Any]:
+        pass
+
+    @abstractmethod
+    def fail(self, record_id: str, workflow_id: str, failure: RunFailure) -> None:
+        pass
+
+    @abstractmethod
+    def delete(self, record_id: str) -> None:
         pass
 
     def apply_transition(self, entity_id: str, event: Any, create_from: Any = None) -> Any:

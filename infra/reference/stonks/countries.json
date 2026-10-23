@@ -1,0 +1,74 @@
+{
+  "BE": {
+    "name": "Belgium",
+    "pea": true,
+    "exchange": "Euronext Brussels",
+    "suffix": ".BR",
+    "mic": "XBRU",
+    "filing_domains": [
+      "live.euronext.com"
+    ]
+  },
+  "DE": {
+    "name": "Germany",
+    "pea": true,
+    "exchange": "XETRA",
+    "suffix": ".DE",
+    "mic": "XETR",
+    "filing_domains": [
+      "eqs-news.com"
+    ]
+  },
+  "ES": {
+    "name": "Spain",
+    "pea": true,
+    "exchange": "Mercado Continuo Espana",
+    "suffix": ".MC",
+    "mic": "XMAD",
+    "filing_domains": [
+      "cnmv.es"
+    ]
+  },
+  "FR": {
+    "name": "France",
+    "pea": true,
+    "exchange": "Euronext Paris",
+    "suffix": ".PA",
+    "mic": "XPAR",
+    "filing_domains": [
+      "live.euronext.com",
+      "info-financiere.fr"
+    ]
+  },
+  "IT": {
+    "name": "Italy",
+    "pea": true,
+    "exchange": "Milan Stock Exchange",
+    "suffix": ".MI",
+    "mic": "XMIL",
+    "filing_domains": [
+      "emarketstorage.it",
+      "1info.it"
+    ]
+  },
+  "NL": {
+    "name": "Netherlands",
+    "pea": true,
+    "exchange": "Euronext Amsterdam",
+    "suffix": ".AS",
+    "mic": "XAMS",
+    "filing_domains": [
+      "live.euronext.com"
+    ]
+  },
+  "PT": {
+    "name": "Portugal",
+    "pea": true,
+    "exchange": "Euronext Lisbon",
+    "suffix": ".LS",
+    "mic": "XLIS",
+    "filing_domains": [
+      "live.euronext.com"
+    ]
+  }
+}

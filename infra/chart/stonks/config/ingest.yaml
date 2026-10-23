@@ -1,0 +1,36 @@
+http:
+  timeout_seconds: 30
+  user_agent: stonks/1.0
+  max_retries: 3
+  retry_backoff_seconds: 5
+universe:
+  constituents_url: https://etf.dws.com/etfdata/export/GBR/ENG/csv/product/constituent/LU0328475792/
+  min_instruments: 200
+  symbol_overrides:
+    DE000FRE5EN2: FRE.DE
+    ES0177542018: IAG.MC
+    NL0015001FS8: FER.MC
+    NL0015002SN0: QIA.DE
+  ignored:
+    FR0014010OO5: Air Liquide loyalty-bonus registered shares; the stock is FR0000120073
+    FR0014013RC7: L'Oreal loyalty-bonus registered shares; the stock is FR0000120321
+    FR0014012X74: Engie loyalty-dividend registered shares (2028); the stock is FR0010208488
+    IT0005733370: secondary Unipol share line; the stock is IT0004810054
+pea:
+  exclude:
+  - FR0013326246
+  - FR0000121964
+  - FR0010040865
+  - FR0000064578
+  - BE0003851681
+  - BE0974349814
+  - ES0105025003
+yahoo:
+  search_url: https://query2.finance.yahoo.com/v1/finance/search
+  chart_url: https://query2.finance.yahoo.com/v8/finance/chart/{symbol}
+  min_interval_seconds: 0.5
+  quotes_count: 10
+bars:
+  history_years: 5
+  overlap_days: 7
+  max_failure_ratio: 0.05

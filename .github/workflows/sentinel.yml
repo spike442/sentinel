@@ -11,6 +11,9 @@ defaults:
   run:
     shell: bash
 
+env:
+  AIRFLOW_VERSION: "3.2.2"
+
 jobs:
   python:
     name: Python checks
@@ -24,13 +27,13 @@ jobs:
         uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
         with:
           version-file: sentinel/uv.lock
-          src: sentinel
+          src: sentinel airflow
           args: format --check
       - name: Lint
         uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
         with:
           version-file: sentinel/uv.lock
-          src: sentinel
+          src: sentinel airflow
       - name: Startup tests
         working-directory: sentinel
         run: pytest -q
@@ -48,12 +51,40 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: sentinel/ui/package-lock.json
+          cache-dependency-path: sentinel/console/ui/package-lock.json
       - name: Build
-        working-directory: sentinel/ui
+        working-directory: sentinel/console/ui
         run: |
           npm ci
           npm run build
+
+  dags:
+    name: DAG import
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          version: "0.12.20"
+          python-version: "3.12"
+      - name: Install Airflow
+        run: |
+          uv venv "$RUNNER_TEMP/airflow"
+          uv pip install --python "$RUNNER_TEMP/airflow" "apache-airflow==$AIRFLOW_VERSION" apache-airflow-providers-cncf-kubernetes \
+            --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-$AIRFLOW_VERSION/constraints-3.12.txt"
+      - name: Import DAGs
+        env:
+          AIRFLOW_HOME: ${{ runner.temp }}/airflow-home
+          AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+          PYTHONPATH: airflow/dags
+        run: |
+          "$RUNNER_TEMP/airflow/bin/python" - <<'PY'
+          from airflow.dag_processing.dagbag import DagBag
+
+          bag = DagBag("airflow/dags", include_examples=False)
+          assert not bag.import_errors, bag.import_errors
+          assert sorted(bag.dags) == ["stonks_daily", "stonks_dividends"], sorted(bag.dags)
+          PY
 
   chart:
     name: Chart checks
@@ -65,18 +96,28 @@ jobs:
           version: v4.3.1
       - uses: helm/chart-testing-action@720270857a28afd41e2426521a7801db09e9b510 # v2.9.0
       - name: Lint chart with each CI values file
-        run: ct lint --charts infra/chart/sentinel --validate-maintainers=false --check-version-increment=false --helm-lint-extra-args=--strict
+        run: ct lint --charts infra/chart/sentinel,infra/chart/stonks --validate-maintainers=false --check-version-increment=false --helm-lint-extra-args=--strict
 
   images:
     name: Image (${{ matrix.image }})
-    needs: [python, ui, chart]
+    needs: [python, ui, dags, chart]
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        image: [api, ui, workflow, sre, pr-review, executor, knowledge, spark]
+        include:
+          - {image: sentinel-api, path: console/api}
+          - {image: sentinel-ui, path: console/ui}
+          - {image: sentinel-workflow, path: workflow}
+          - {image: sentinel-sre, path: sre}
+          - {image: sentinel-executor, path: executor}
+          - {image: sentinel-knowledge, path: knowledge}
+          - {image: stonks-api, path: stonks/api, namespace: sentinel/}
+          - {image: stonks-ingest, path: stonks/ingest, namespace: sentinel/}
+          - {image: stonks-dividends, path: stonks/dividends, namespace: sentinel/}
+          - {image: stonks-spark, path: stonks/spark, namespace: sentinel/}
     env:
-      IMAGE: ghcr.io/spike442/sentinel-${{ matrix.image }}:${{ needs.python.outputs.version }}
+      IMAGE: ghcr.io/spike442/${{ matrix.namespace }}${{ matrix.image }}:${{ needs.python.outputs.version }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
@@ -93,13 +134,13 @@ jobs:
           DOCKER_BUILD_SUMMARY: false
         with:
           context: .
-          file: sentinel/${{ matrix.image }}/Dockerfile
+          file: sentinel/${{ matrix.path }}/Dockerfile
           push: ${{ inputs.publish }}
           tags: ${{ env.IMAGE }}
           sbom: ${{ inputs.publish }}
           provenance: ${{ inputs.publish && 'mode=max' || 'false' }}
-          cache-from: type=gha,scope=sentinel-${{ matrix.image }}
-          cache-to: type=gha,mode=max,scope=sentinel-${{ matrix.image }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
       - if: inputs.publish
         uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3.9.1
       - if: inputs.publish
@@ -123,5 +164,8 @@ jobs:
           GHCR_TOKEN: ${{ github.token }}
         run: |
           printf '%s' "$GHCR_TOKEN" | helm registry login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
-          helm package infra/chart/sentinel --version "$VERSION" --app-version "$VERSION" --destination /tmp
-          helm push "/tmp/sentinel-$VERSION.tgz" "oci://ghcr.io/spike442/charts"
+          for release in sentinel=charts stonks=charts/sentinel; do
+            chart="${release%%=*}"
+            helm package "infra/chart/$chart" --version "$VERSION" --app-version "$VERSION" --destination /tmp
+            helm push "/tmp/$chart-$VERSION.tgz" "oci://ghcr.io/spike442/${release#*=}"
+          done

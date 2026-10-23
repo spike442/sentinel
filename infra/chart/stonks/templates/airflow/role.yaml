@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/name: stonks-airflow
+{{ include "stonks.standardLabels" . | indent 4 }}
+  name: stonks-airflow
+  namespace: {{ .Release.Namespace }}
+rules:
+- apiGroups: [""]
+  resources: [pods]
+  verbs: [get, list, watch, create, delete, patch]
+- apiGroups: [""]
+  resources: [pods/log]
+  verbs: [get, list]
+- apiGroups: [""]
+  resources: [events]
+  verbs: [get, list, watch]
+- apiGroups: [sparkoperator.k8s.io]
+  resources: [sparkapplications, sparkapplications/status]
+  verbs: [get, list, watch, create, delete, patch, update]

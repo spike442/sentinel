@@ -34,7 +34,11 @@ boundary: paths must be repository-relative and content must not match its built
 patterns. File changes carry paths and complete content, or `delete` with empty content to remove an
 existing file (a directory is removed file by file, and a deletion that also carries content is rejected);
 the executor stages deletions in the checkout and sends them to GitHub as tree entries without a blob. An empty PR title or body falls back to the
-diagnosis summary and hypothesis. PR Review then reviews and merges the fix PR like any other. The SRE prompt
+diagnosis summary and hypothesis. PR Review then reviews and merges the fix PR like any other, and attaches that review to the incident:
+discovery matches the PR to the incident by its recorded URL, the incident keeps the review's ID (its detail links
+to the review, and the review links back), and its timeline records `fix_review_started` and the review's final
+status (`fix_review_blocked` with the reason, `fix_review_failed`, or `fix_review_merged`). These events never change
+the incident's status: it stays `awaiting` until Alertmanager resolves the alert. The SRE prompt
 requires secret-free changes. There are no path or resource-kind limits: a
 fix may change any file and kind in the repository. A rejected proposal becomes blocked
 with the reason in its hypothesis. Changes are grouped into one PR for the fix, even if several
@@ -86,8 +90,8 @@ finish later is `RunTimedOut`; `awaiting` has no timeout. `awaiting`, `blocked`,
 alert resolves or an operator replays them from the UI; a firing alert reopens only a resolved or skipped
 incident. `skipped` is not announced on Discord.
 
-Sources: `sentinel/workflow/src/sentinel/workflow/incidents/`,
-`sentinel/sre/src/sentinel/agents/sre/run.py`,
-`sentinel/sre/src/sentinel/agents/sre/agent.py`, `sentinel/sre/src/sentinel/agents/sre/tools.py`, `sentinel/sre/src/sentinel/agents/sre/commands.py`,
-`sentinel/sre/src/sentinel/agents/sre/prometheus.py`,
-`sentinel/core/src/sentinel/core/domain.py`, `sentinel/ui/src/components/DomainView.tsx`.
+Sources: `sentinel/workflow/src/sentinel/workflow/sre/incidents/`,
+`sentinel/sre/src/sentinel/sre/incidents/run.py`,
+`sentinel/agents/src/sentinel/agents/sre/incident/agent.py`, `sentinel/agents/src/sentinel/agents/sre/incident/tools.py`, `sentinel/agents/src/sentinel/agents/sre/incident/commands.py`,
+`sentinel/agents/src/sentinel/agents/sre/incident/prometheus.py`,
+`sentinel/core/src/sentinel/core/domain.py`, `sentinel/console/ui/src/components/DomainView.tsx`.

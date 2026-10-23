@@ -42,6 +42,11 @@ class RecordReader:
 class IncidentReader(RecordReader):
     model = IncidentRecord
 
+    def incident_for(self, pull_request_url: str) -> str | None:
+        statement = select(IncidentRecord.entity_id).where(IncidentRecord.pull_request_url == pull_request_url).limit(1)
+        with self.database.sessions() as session:
+            return session.scalar(statement)
+
     def running_manual_actions(self) -> list[dict[str, Any]]:
         statement = (
             select(IncidentRecord)

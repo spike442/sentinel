@@ -16,6 +16,8 @@ spec:
       app.kubernetes.io/role: ui
   template:
     metadata:
+      annotations:
+        checksum/domains: {{ include (print $.Template.BasePath "/ui/configmap.yaml") . | sha256sum }}
       labels:
 {{ include "sentinel.standardLabels" . | indent 8 }}
         app.kubernetes.io/name: sentinel
@@ -58,6 +60,13 @@ spec:
         volumeMounts:
         - name: tmp
           mountPath: /tmp
+        - name: domains
+          mountPath: /usr/share/nginx/html/domains.json
+          subPath: domains.json
+          readOnly: true
       volumes:
       - name: tmp
         emptyDir: {}
+      - name: domains
+        configMap:
+          name: sentinel-ui-domains

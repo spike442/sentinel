@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS pr_reviews (
     base_sha TEXT NOT NULL,
     head_sha TEXT NOT NULL,
     pull_request_url TEXT NOT NULL,
+    incident_id TEXT,
     checks JSONB NOT NULL,
     risk TEXT,
     confidence TEXT,

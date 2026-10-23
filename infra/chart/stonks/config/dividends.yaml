@@ -1,0 +1,69 @@
+http:
+  timeout_seconds: 30
+  user_agent: stonks/1.0
+  max_retries: 2
+  retry_backoff_seconds: 5
+search:
+  url: http://searxng.agents.svc.cluster.local:8080/search
+  max_results: 8
+pages:
+  max_bytes: 15000000
+  focus_terms:
+  - dividend
+  - dividende
+  - dividendo
+  - dividendi
+  - ex-date
+  - ex-dividend
+  - ex-tag
+  - record date
+  - détachement
+  - stacco
+  window_chars: 600
+  max_chars: 12000
+limits:
+  max_tool_calls: 6
+  run_timeout_seconds: 240
+research:
+  max_instruments: 30
+  recheck_days: 7
+  max_failure_ratio: 0.2
+validation:
+  newswire_domains:
+  - cision.com
+  - globenewswire.com
+  - businesswire.com
+  - sec.gov
+  issuer_domains: {}
+  name_stopwords:
+  - class
+  - bank
+  - group
+  - holding
+  - holdings
+  - company
+  - corporation
+  - international
+  - industries
+  - energy
+  - europe
+  - european
+  - societe
+  - aktiengesellschaft
+  - finance
+  - financial
+  month_names:
+    1: [january, jan, janvier, januar, gennaio, enero, januari, janeiro]
+    2: [february, feb, fevrier, februar, febbraio, febrero, februari, fevereiro]
+    3: [march, mar, mars, marz, maerz, marzo, maart, marco]
+    4: [april, apr, avril, aprile, abril]
+    5: [may, mai, maggio, mayo, mei, maio]
+    6: [june, jun, juin, juni, giugno, junio, junho]
+    7: [july, jul, juillet, juli, luglio, julio, julho]
+    8: [august, aug, aout, agosto, augustus]
+    9: [september, sep, sept, septembre, settembre, septiembre, setembro]
+    10: [october, oct, octobre, oktober, ottobre, octubre, outubro]
+    11: [november, nov, novembre, noviembre, novembro]
+    12: [december, dec, decembre, dezember, dicembre, diciembre, dezembro]
+  same_day_record_from: 2027-10-11
+  calendar_days_ahead: 400

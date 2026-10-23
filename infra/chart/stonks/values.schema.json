@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["s3", "search", "llm", "airflow", "images", "route"],
+  "additionalProperties": false,
+  "properties": {
+    "global": {"type": "object"},
+    "s3": {
+      "type": "object",
+      "required": ["endpoint", "region", "bucket"],
+      "additionalProperties": false,
+      "properties": {
+        "endpoint": {"type": "string", "minLength": 1},
+        "region": {"type": "string", "minLength": 1},
+        "bucket": {"type": "string", "minLength": 1}
+      }
+    },
+    "search": {
+      "type": "object",
+      "required": ["url"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {"type": "string", "minLength": 1}
+      }
+    },
+    "llm": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "base_url": {"type": "string", "minLength": 1},
+        "model": {"type": "string", "minLength": 1},
+        "max_retries": {"type": "integer", "minimum": 0},
+        "request_timeout_seconds": {"type": "integer", "minimum": 1}
+      }
+    },
+    "images": {
+      "type": "object",
+      "required": ["api"],
+      "additionalProperties": false,
+      "properties": {
+        "api": {
+          "type": "object",
+          "required": ["repository", "tag"],
+          "additionalProperties": false,
+          "properties": {
+            "repository": {"type": "string", "minLength": 1},
+            "tag": {"type": "string"}
+          }
+        }
+      }
+    },
+    "route": {
+      "type": "object",
+      "required": ["hostname", "gatewayName", "gatewayNamespace"],
+      "additionalProperties": false,
+      "properties": {
+        "hostname": {"type": "string", "minLength": 1},
+        "gatewayName": {"type": "string", "minLength": 1},
+        "gatewayNamespace": {"type": "string", "minLength": 1}
+      }
+    },
+    "airflow": {
+      "type": "object",
+      "required": ["namespace", "serviceAccount"],
+      "additionalProperties": false,
+      "properties": {
+        "namespace": {"type": "string", "minLength": 1},
+        "serviceAccount": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

@@ -2,5 +2,3 @@
 agents:
   sre:
     enabled: false
-  pr-review:
-    enabled: false

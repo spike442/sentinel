@@ -5,7 +5,7 @@ app.kubernetes.io/instance: {{ .Release.Name | quote }}
 {{- end -}}
 
 {{- define "sentinel.anyAgentEnabled" -}}
-{{- if or .Values.agents.sre.enabled (index .Values.agents "pr-review").enabled }}true{{ end -}}
+{{- if .Values.agents.sre.enabled }}true{{ end -}}
 {{- end -}}
 
 {{- define "sentinel.egress.dns" -}}

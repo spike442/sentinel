@@ -1,0 +1,23 @@
+s3:
+  endpoint: http://rustfs-svc.storage.svc.cluster.local:9000
+  region: us-east-1
+  bucket: stonks
+
+search:
+  url: http://searxng.agents.svc.cluster.local:8080/search
+
+llm: {}
+
+airflow:
+  namespace: datalakehouse
+  serviceAccount: airflow-worker
+
+images:
+  api:
+    repository: ghcr.io/spike442/sentinel/stonks-api
+    tag: ""
+
+route:
+  hostname: sentinel.example.test
+  gatewayName: gateway
+  gatewayNamespace: network

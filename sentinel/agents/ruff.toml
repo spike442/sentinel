@@ -1,0 +1,13 @@
+extend = "../pyproject.toml"
+src = ["."]
+
+[lint]
+extend-select = ["TID251"]
+
+[lint.flake8-tidy-imports.banned-api]
+"stonks".msg = "The agents library serves domains and never imports them."
+"sentinel.api".msg = "The agents library serves domains and never imports them."
+"sentinel.executor".msg = "The agents library serves domains and never imports them."
+"sentinel.knowledge".msg = "The agents library serves domains and never imports them."
+"sentinel.sre".msg = "The agents library serves domains and never imports them."
+"sentinel.workflow".msg = "The agents library serves domains and never imports them."

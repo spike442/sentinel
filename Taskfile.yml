@@ -9,7 +9,7 @@ tasks:
     desc: Install Sentinel and its UI dependencies
     cmds:
       - cd sentinel && uv sync --locked --all-packages --group dev
-      - npm --prefix sentinel/ui ci
+      - npm --prefix sentinel/console/ui ci
       - pre-commit install
 
   lint:
@@ -19,7 +19,7 @@ tasks:
 
   ui:
     desc: Serve the UI
-    dir: sentinel/ui
+    dir: sentinel/console/ui
     vars:
       SENTINEL_API_URL: '{{.SENTINEL_API_URL | default "https://sentinel.timcasa.me/api"}}'
     env:
@@ -42,10 +42,10 @@ tasks:
       - |-
         component="{{.COMPONENT}}"
         if [ -z "$component" ]; then
-          component="$(gum choose --header 'Select deployment component' all clickhouse postgresql s3)"
+          component="$(gum choose --header 'Select deployment component' all clickhouse postgresql s3 stonks-s3)"
         fi
         case "$component" in
-          all|clickhouse|postgresql|s3) ;;
+          all|clickhouse|postgresql|s3|stonks-s3) ;;
           *) echo "Unsupported deployment component: $component" >&2; exit 1 ;;
         esac
         ansible-playbook deploy.yaml --limit "$component" -v {{.CLI_ARGS}}

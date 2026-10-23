@@ -1,0 +1,83 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: stonks-daily
+  labels:
+    app.kubernetes.io/name: stonks-spark
+    app.kubernetes.io/part-of: stonks
+spec:
+  type: Python
+  pythonVersion: "3"
+  mode: cluster
+  image: "{{ var.value.get('stonks_registry', 'ghcr.io/spike442/sentinel') }}/stonks-spark:{{ var.value.stonks_version }}"
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: local:///opt/stonks-spark/main.py
+  arguments:
+  - --trade-date
+  - "{{ params.trade_date or (logical_date or dag_run.run_after).in_timezone('Europe/Paris').strftime('%Y-%m-%d') }}"
+  sparkVersion: "4.2.0"
+  restartPolicy:
+    type: Never
+  sparkConf:
+    spark.sql.session.timeZone: UTC
+    spark.sql.shuffle.partitions: "8"
+  driver:
+    cores: 1
+    memory: 1g
+    serviceAccount: stonks-spark
+    podSecurityContext: &podSecurity
+      runAsNonRoot: true
+      runAsUser: 185
+      runAsGroup: 185
+      fsGroup: 185
+      seccompProfile: {type: RuntimeDefault}
+    securityContext: &containerSecurity
+      allowPrivilegeEscalation: false
+      capabilities: {drop: [ALL]}
+    env: &env
+    - name: HOME
+      value: /tmp
+    - name: STONKS_CONFIG_DIR
+      value: /etc/stonks
+    - name: S3_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: stonks-secrets
+          key: S3_ACCESS_KEY_ID
+    - name: S3_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: stonks-secrets
+          key: S3_SECRET_ACCESS_KEY
+    volumeMounts: &mounts
+    - name: config
+      mountPath: /etc/stonks
+      readOnly: true
+    - name: tmp
+      mountPath: /tmp
+    resources:
+      requests:
+        cpu: 250m
+        memory: 1Gi
+      limits:
+        memory: 2Gi
+  executor:
+    instances: 1
+    cores: 1
+    memory: 2g
+    podSecurityContext: *podSecurity
+    securityContext: *containerSecurity
+    env: *env
+    volumeMounts: *mounts
+    resources:
+      requests:
+        cpu: 250m
+        memory: 2Gi
+      limits:
+        memory: 3Gi
+  volumes:
+  - name: config
+    configMap:
+      name: stonks-config
+  - name: tmp
+    emptyDir: {}

@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS incidents (
     alert JSONB NOT NULL,
     diagnosis JSONB NOT NULL,
     pull_request_url TEXT,
+    review_id TEXT,
     replayed_at TIMESTAMPTZ,
     manual_actions JSONB NOT NULL,
     timeline JSONB NOT NULL,
@@ -18,3 +19,4 @@ CREATE TABLE IF NOT EXISTS incidents (
 );
 
 CREATE INDEX IF NOT EXISTS incidents_listing ON incidents (updated_at DESC);
+CREATE INDEX IF NOT EXISTS incidents_pull_request ON incidents (pull_request_url);

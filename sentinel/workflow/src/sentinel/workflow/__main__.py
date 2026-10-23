@@ -12,13 +12,13 @@ from sentinel.core.knowledge import KnowledgeClient
 from sentinel.core.observability.logging import configure_logging
 from sentinel.core.persistence.postgres import PostgresDatabase
 from sentinel.workflow.discord import DiscordWebhook
-from sentinel.workflow.incidents.alertmanager import AlertmanagerClient
-from sentinel.workflow.incidents.repository import IncidentRepository
-from sentinel.workflow.incidents.workflow import IncidentWorkflow
-from sentinel.workflow.reviews.repository import PrReviewRepository
-from sentinel.workflow.reviews.workflow import PrReviewWorkflow
 from sentinel.workflow.routing import SHARED_TOPICS, DomainRouter, DomainWorkflow, Handler
 from sentinel.workflow.runner import Route, run
+from sentinel.workflow.sre.incidents.alertmanager import AlertmanagerClient
+from sentinel.workflow.sre.incidents.repository import IncidentRepository
+from sentinel.workflow.sre.incidents.workflow import IncidentWorkflow
+from sentinel.workflow.sre.reviews.repository import PrReviewRepository
+from sentinel.workflow.sre.reviews.workflow import PrReviewWorkflow
 
 logger = logging.getLogger(__name__)
 
@@ -71,8 +71,8 @@ def main() -> None:
         resources.callback(knowledge.close)
         discord = DiscordWebhook(settings.discord_webhook_url)
         resources.callback(discord.close)
+        incidents = IncidentRepository(database)
         if incident_settings is not None:
-            incidents = IncidentRepository(database)
             alertmanager = AlertmanagerClient(incident_settings.alertmanager.url)
             resources.callback(alertmanager.close)
             incident_workflow = IncidentWorkflow(incident_settings, incidents, knowledge, alertmanager, discord)
@@ -86,7 +86,9 @@ def main() -> None:
             )
             github = GitHubReader(github_auth)
             resources.callback(github.close)
-            review_workflow = PrReviewWorkflow(review_settings, reviews, knowledge, github, discord)
+            review_workflow = PrReviewWorkflow(
+                review_settings, reviews, knowledge, github, discord, incidents=incidents
+            )
             workflows.append(review_workflow)
             poll = every(
                 review_settings.review_poll_seconds,

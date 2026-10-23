@@ -25,8 +25,9 @@ WORKDIR /app
 ENV UV_PYTHON_DOWNLOADS=0
 COPY sentinel/pyproject.toml sentinel/uv.lock ./
 COPY sentinel/core ./core
+COPY sentinel/agents ./agents
 COPY sentinel/sre ./sre
-RUN --mount=from=uv,source=/uv,target=/bin/uv UV_CACHE_DIR=/tmp/uv-cache uv sync --frozen --no-dev --package sentinel-sre-agent --no-editable
+RUN --mount=from=uv,source=/uv,target=/bin/uv UV_CACHE_DIR=/tmp/uv-cache uv sync --frozen --no-dev --package sentinel-sre --no-editable
 FROM python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -42,4 +43,4 @@ COPY --from=cli-tools /usr/local/bin/helm /usr/local/bin/helm
 COPY --from=cli-tools /usr/local/bin/yq /usr/local/bin/yq
 ENV GIT_TERMINAL_PROMPT=0
 USER 65532:65532
-CMD ["python", "-m", "sentinel.agents.sre.worker"]
+CMD ["python", "-m", "sentinel.sre.worker"]

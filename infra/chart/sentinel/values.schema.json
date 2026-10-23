@@ -3,7 +3,6 @@
   "type": "object",
   "required": [
     "images",
-    "spark",
     "secrets",
     "postgres",
     "clickhouse",
@@ -12,6 +11,7 @@
     "prometheus",
     "alertmanager",
     "route",
+    "console",
     "executor"
   ],
   "properties": {
@@ -22,10 +22,8 @@
         "ui",
         "workflow",
         "sre",
-        "prReview",
         "executor",
-        "knowledge",
-        "spark"
+        "knowledge"
       ],
       "additionalProperties": false,
       "properties": {
@@ -41,16 +39,10 @@
         "sre": {
           "$ref": "#/definitions/image"
         },
-        "prReview": {
-          "$ref": "#/definitions/image"
-        },
         "executor": {
           "$ref": "#/definitions/image"
         },
         "knowledge": {
-          "$ref": "#/definitions/image"
-        },
-        "spark": {
           "$ref": "#/definitions/image"
         }
       }
@@ -87,13 +79,10 @@
         "pr-review": {
           "type": "object",
           "required": [
-            "enabled",
             "runTimeoutSeconds"
           ],
+          "additionalProperties": false,
           "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
             "runTimeoutSeconds": {
               "$ref": "#/definitions/seconds"
             }
@@ -109,20 +98,6 @@
       "properties": {
         "actionTimeoutSeconds": {
           "$ref": "#/definitions/seconds"
-        }
-      }
-    },
-    "spark": {
-      "type": "object",
-      "required": [
-        "enabled"
-      ],
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "storageClass": {
-          "$ref": "#/definitions/name"
         }
       }
     },
@@ -195,14 +170,10 @@
           "type": "object",
           "required": [
             "sre",
-            "pr-review",
             "executor"
           ],
           "properties": {
             "sre": {
-              "$ref": "#/definitions/name"
-            },
-            "pr-review": {
               "$ref": "#/definitions/name"
             },
             "executor": {
@@ -215,7 +186,6 @@
           "required": [
             "cluster_alerts",
             "workflow_requests",
-            "outcomes",
             "sre_commands",
             "sre_returns",
             "pr_review_commands",
@@ -243,23 +213,6 @@
               }
             },
             "workflow_requests": {
-              "type": "object",
-              "required": [
-                "name",
-                "partitions"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "name": {
-                  "$ref": "#/definitions/name"
-                },
-                "partitions": {
-                  "type": "integer",
-                  "minimum": 1
-                }
-              }
-            },
-            "outcomes": {
               "type": "object",
               "required": [
                 "name",
@@ -434,6 +387,39 @@
       "properties": {
         "url": {
           "type": "string"
+        }
+      }
+    },
+    "console": {
+      "type": "object",
+      "required": [
+        "domains"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "domains": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "api"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/definitions/name"
+              },
+              "api": {
+                "type": "string",
+                "pattern": "^/"
+              },
+              "icon": {
+                "$ref": "#/definitions/name"
+              }
+            }
+          }
         }
       }
     },

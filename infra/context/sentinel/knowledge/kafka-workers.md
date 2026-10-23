@@ -1,7 +1,7 @@
 # Kafka workflow workers
 
 Sentinel owns incident and review state in PostgreSQL. Alertmanager's webhook receiver posts each notification to
-the API at `POST /api/events/alertmanager`, which normalizes every alert in it to an `Alert` (adding `source:
+the API at `POST /api/sre/events/alertmanager`, which normalizes every alert in it to an `Alert` (adding `source:
 alertmanager` unless the alert already has a source) and publishes it to `sentinel.cluster.alerts` keyed by its
 fingerprint, so one alert's firing and resolution stay ordered. The API replies only after the broker acknowledges
 each alert (a non-2xx reply makes Alertmanager retry). Repeated notifications for an alert that is already queued or
@@ -16,10 +16,14 @@ workflow consumer routes it to that domain's workflow, discarding a disabled dom
 the pure state machines to claim and prepare work, then publishes a typed command to
 `sentinel.sre.commands`, `sentinel.pr-review.commands`, or `sentinel.executor.commands`.
 
-Each enabled agent is a separate Deployment and Kafka consumer group. SRE and PR workers
-receive prepared requests with RAG context and publish to `sentinel.sre.returns` or
-`sentinel.pr-review.returns` before committing their command offsets. Returns contain the workflow
-ID, a small original request, and either an agent result or an error type.
+Both SRE agents run in one process (`sentinel.sre.worker`, one container of the `sentinel-sre` Deployment),
+each on its own thread and consumer group (`sentinel-incident`, `sentinel-review`); if either loop stops, the
+process exits and Kubernetes restarts it. They receive prepared requests with RAG context and publish to `sentinel.sre.returns` or
+`sentinel.pr-review.returns` before committing their command offsets. Every message about a record carries
+the record's ID (`record_id`, the incident or review) beside its workflow ID: workflow requests (all but discovery),
+agent commands and returns, and executor commands and returns. Returns contain both IDs, a small original request,
+and either the agent's result or a `RunFailure` (the error type, and for a run that started, its audit actions
+and tool budget, which the failed attempt keeps).
 The `KafkaTopic` keys in code are internal routing names; broker topic names come from the
 chart's `kafka.topics` values, which also create the topics, rendered into each process's configuration. Shared Kafka connection
 settings live in `common/kafka.yaml`.
@@ -29,14 +33,13 @@ effect when the worker restarts.
 
 `sentinel-executor` consumes `sentinel.executor.commands`. Each `ExecutorCommand` names an
 `ExecutorAction` (`create-pull-request`, `merge-pull-request`, `run-command`): every action changes
-GitHub or the cluster; the workflow does its own reads and posts Discord notifications itself. Each command carries its typed payload, and workflow `context` that comes back
-unchanged. The executor publishes the `ExecutorReturn` to `sentinel.executor.returns` before committing
+GitHub or the cluster; the workflow does its own reads and posts Discord notifications itself. Each command carries its typed payload, its record and workflow IDs, and
+optional workflow `context` (only a manual action's claim) that come back unchanged. The executor publishes the `ExecutorReturn` to `sentinel.executor.returns` before committing
 the command; Workflow routes it by the return's `domain`. Workflow applies every
-return through the domain workflow and repository; the pure machine decides transitions. The
-final saved state is published to `sentinel.workflow.outcomes` for Spark archiving.
+return through the domain workflow and repository; the pure machine decides transitions.
 
 An incident fix is saved, the incident still `running` (diagnosis and audit actions included), before the
-executor opens its pull request; the command's context carries only the incident ID, so it stays within Kafka's
+executor opens its pull request; the command names the incident only by its record ID, so it stays within Kafka's
 message size limit. An approved review stays `running` while the executor merges exactly the reviewed head
 SHA; a merge GitHub confirms is recorded whichever workflow owns the review by then. Neither holds a lease:
 an operator may replay a running incident or review from the UI at any time, and the executor's GitHub
@@ -56,8 +59,8 @@ at most once: sentinel-executor commits the command's offset before it runs, so 
 never reruns one; the action's timeout then marks it failed. A repeated alert does not restart an
 incident that already has a workflow.
 
-Each role has its own Kafka user. `sentinel` (API, workflow, Spark) uses the `sentinel.` topics; `sentinel-sre`
-and `sentinel-pr-review` read only their commands and write only their returns, and `sentinel-executor` reads
+Each role has its own Kafka user. `sentinel` (API and workflow) uses the `sentinel.` topics; `sentinel-sre`
+(both SRE agents) reads only the SRE and PR review commands and writes only their returns, and `sentinel-executor` reads
 `sentinel.executor.commands` and writes only `sentinel.executor.returns`, so an agent cannot publish executor
 commands or returns. Topics are split by producer: each agent keeps its own command and return topic,
 so no agent can write another agent's results, while topics with one producer and one consumer for
@@ -81,6 +84,6 @@ scheduled by the review workflow in sentinel-workflow and can also be requested 
 
 Sources: `sentinel/workflow/src/sentinel/workflow/`, `sentinel/executor/src/sentinel/executor/`,
 `sentinel/core/src/sentinel/core/kafka/`,
-`sentinel/workflow/src/sentinel/workflow/incidents/`, `sentinel/workflow/src/sentinel/workflow/reviews/`,
-`sentinel/sre/src/sentinel/agents/sre/worker.py`, `sentinel/pr-review/src/sentinel/agents/pr_review/worker.py`, and
+`sentinel/workflow/src/sentinel/workflow/sre/incidents/`, `sentinel/workflow/src/sentinel/workflow/sre/reviews/`,
+`sentinel/sre/src/sentinel/sre/incidents/worker.py`, `sentinel/sre/src/sentinel/sre/reviews/worker.py`, and
 `infra/chart/sentinel/templates/`.

@@ -5,17 +5,8 @@ Repository: `sentinel`. Scope: database ownership, domain history, and grounded 
 ## Responsibilities
 
 Sentinel stores current incidents, reviews, feedback, action results, and their UI-visible history in PostgreSQL.
-Sentinel publishes the saved incident or review after each completed workflow to
-`sentinel.workflow.outcomes`. Spark archives those messages to S3 under
-`raw/workflows/domain=<domain>/run_date=<date>/` and logs their status.
-It does not write to ClickHouse. Archive object keys use the workflow ID, so a retried
-micro-batch overwrites the same object. The stream runs one micro-batch every `streaming.trigger_interval`
-(`infra/chart/sentinel/config/spark.yml`, 30 seconds) instead of polling Kafka continuously, so an idle topic
-costs one offset check per interval and an archive lands within that interval. The stream reads with
-`failOnDataLoss=false`: if Spark is down longer than the topic retention (7 days), it resumes from the oldest
-retained offset and logs the gap instead of refusing to start; the missed outcomes are lost from the archive but
-remain in PostgreSQL. It consumes as `kafka.group.id` `sentinel-spark-outcomes` although Structured Streaming keeps
-offsets in its checkpoint, because the `sentinel` Kafka user may only use consumer groups prefixed `sentinel-`.
+PostgreSQL is the only store of incident and review records and their history; Sentinel keeps no separate archive
+of them.
 Agent workers have no platform status table. They receive commands and return decisions
 through Kafka; Sentinel owns application database access.
 
@@ -24,7 +15,7 @@ Structured values such as alerts, diagnoses, timelines, checks, and action histo
 have their own JSONB column. Domain repositories
 create missing records with an atomic `INSERT ... ON CONFLICT DO NOTHING`, then lock the
 row with `SELECT FOR UPDATE`. Inside that transaction the repository copies the row into a
-frozen snapshot, asks the pure state machine (`sentinel/workflow/src/sentinel/workflow/incidents/machine.py`,
+frozen snapshot, asks the pure state machine (`sentinel/workflow/src/sentinel/workflow/sre/incidents/machine.py`,
 `pr_review/machine.py`) to decide the event at the database clock, and writes back only the
 returned state: `Accepted`, `Unchanged`, `Rejected`, `Missing`, or `Removed`. The machines
 never mutate inputs or perform I/O, and each `transition` rejects a status change that the workflow
@@ -110,6 +101,6 @@ The model generates vectors in the knowledge service; ClickHouse stores and
 searches them. Only the knowledge service contacts ClickHouse. Mandatory prompts and live tool
 verification remain necessary.
 
-Sources: `sentinel/workflow/src/sentinel/workflow/incidents/`, `sentinel/workflow/src/sentinel/workflow/reviews/`, `sentinel/knowledge/src/sentinel/knowledge/`,
+Sources: `sentinel/workflow/src/sentinel/workflow/sre/incidents/`, `sentinel/workflow/src/sentinel/workflow/sre/reviews/`, `sentinel/knowledge/src/sentinel/knowledge/`,
 `infra/sql/`,
 `infra/chart/sentinel/config/common/clickhouse.yaml`, `infra/chart/sentinel/config/knowledge.yaml`, and the Homelab ClickHouse app definition.

@@ -9,7 +9,7 @@ repos:
       - id: check-toml
       - id: check-yaml
         args: [--allow-multiple-documents]
-        exclude: ^infra/chart/sentinel/templates/
+        exclude: ^infra/chart/(sentinel|stonks)/templates/
       - id: end-of-file-fixer
       - id: trailing-whitespace
   - repo: local

@@ -75,7 +75,7 @@ spec:
             secretKeyRef:
               name: {{ .Values.secrets.app }}
               key: DISCORD_WEBHOOK_URL
-        {{- if (index .Values.agents "pr-review").enabled }}
+        {{- if .Values.agents.sre.enabled }}
         - name: SENTINEL_GITHUB_APP_ID
           valueFrom:
             secretKeyRef:

@@ -1,4 +1,0 @@
----
-agents:
-  pr-review:
-    enabled: false

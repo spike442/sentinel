@@ -1,13 +1,11 @@
 import logging
 import threading
-from typing import Any
 
 from confluent_kafka import Producer
 from pydantic import BaseModel
 from sentinel.core.config.settings import KafkaClientSettings
-from sentinel.core.domain import AgentDomain
 from sentinel.core.kafka.config import client_config, topic_name
-from sentinel.core.kafka.contracts import AgentReturn, ExecutorReturn, KafkaTopic, WorkflowOutcome
+from sentinel.core.kafka.contracts import AgentReturn, ExecutorReturn, KafkaTopic, RunFailure
 
 logger = logging.getLogger(__name__)
 
@@ -15,13 +13,6 @@ MAX_RETURN_BYTES = 800_000
 
 _producer: Producer | None = None
 _producer_lock = threading.Lock()
-
-
-def publish_outcome(
-    settings: KafkaClientSettings, domain: AgentDomain, workflow_id: str, record: dict[str, Any]
-) -> None:
-    outcome = WorkflowOutcome(domain=domain, workflow_id=workflow_id, record=record)
-    publish(settings, KafkaTopic.OUTCOMES, workflow_id, outcome)
 
 
 def _shared_producer(settings: KafkaClientSettings) -> Producer:
@@ -54,5 +45,10 @@ def publish_return(settings: KafkaClientSettings, topic: KafkaTopic, event: Agen
     size = len(serialized.encode())
     if size > MAX_RETURN_BYTES:
         logger.error("Return exceeds the Kafka limit topic=%s workflow_id=%s bytes=%s", topic, event.workflow_id, size)
-        event = event.model_copy(update={"result": None, "error": "ResultTooLarge"})
+        too_large = "ResultTooLarge"
+        if isinstance(event, AgentReturn):
+            failure = RunFailure(error=too_large)
+            event = event.model_copy(update={"result": None, "failure": failure})
+        else:
+            event = event.model_copy(update={"result": None, "error": too_large})
     publish(settings, topic, event.workflow_id, event)

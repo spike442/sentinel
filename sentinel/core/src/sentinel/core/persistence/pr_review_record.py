@@ -21,6 +21,7 @@ class PrReviewRecord(Base):
     base_sha: Mapped[str] = mapped_column(String, nullable=False)
     head_sha: Mapped[str] = mapped_column(String, nullable=False)
     pull_request_url: Mapped[str] = mapped_column(String, nullable=False)
+    incident_id: Mapped[str | None] = mapped_column(String)
     checks: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
     risk: Mapped[str | None] = mapped_column(String)
     confidence: Mapped[str | None] = mapped_column(String)
@@ -47,6 +48,7 @@ class PrReviewRecord(Base):
             "base_sha": self.base_sha,
             "head_sha": self.head_sha,
             "pull_request_url": self.pull_request_url,
+            "incident_id": self.incident_id,
             "checks": self.checks,
             "risk": self.risk,
             "confidence": self.confidence,

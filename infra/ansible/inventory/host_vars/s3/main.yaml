@@ -4,4 +4,6 @@ region: us-east-1
 bucket: sentinel
 exclude: README.md
 uploads:
-  - {source: "{{ repository_root }}/infra/context", prefix: context}
+  - {source: "{{ repository_root }}/infra/context/dotfiles", prefix: context/dotfiles}
+  - {source: "{{ repository_root }}/infra/context/homelab", prefix: context/homelab}
+  - {source: "{{ repository_root }}/infra/context/sentinel", prefix: context/sentinel}

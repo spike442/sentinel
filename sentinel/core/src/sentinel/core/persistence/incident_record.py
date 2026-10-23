@@ -20,6 +20,7 @@ class IncidentRecord(Base):
     alert: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     diagnosis: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     pull_request_url: Mapped[str | None] = mapped_column(String)
+    review_id: Mapped[str | None] = mapped_column(String)
     replayed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     manual_actions: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
     timeline: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
@@ -37,6 +38,7 @@ class IncidentRecord(Base):
             "alert": self.alert,
             "diagnosis": self.diagnosis,
             "pull_request_url": self.pull_request_url,
+            "review_id": self.review_id,
             "replayed_at": self.replayed_at.isoformat() if self.replayed_at else None,
             "manual_actions": self.manual_actions,
             "timeline": self.timeline,

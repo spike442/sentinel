@@ -91,12 +91,12 @@ metadata:
 spec:
   podSelector:
     matchExpressions:
-    - {key: app.kubernetes.io/name, operator: In, values: [sre, pr-review, sentinel-executor]}
+    - {key: app.kubernetes.io/name, operator: In, values: [sre, sentinel-executor]}
   policyTypes: [Ingress]
 {{- end }}
 {{- if .Values.networkPolicy.ciliumEgress }}
-{{- $egress := dict "sre" (list "dns" "apiserver" "knowledge" "prometheus" "storage" "messaging" "internet") "pr-review" (list "dns" "knowledge" "storage" "messaging" "internet") "sentinel-executor" (list "dns" "apiserver" "messaging" "internet") }}
-{{- range $component := list "sre" "pr-review" "sentinel-executor" }}
+{{- $egress := dict "sre" (list "dns" "apiserver" "knowledge" "prometheus" "storage" "messaging" "internet") "sentinel-executor" (list "dns" "apiserver" "messaging" "internet") }}
+{{- range $component := list "sre" "sentinel-executor" }}
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy

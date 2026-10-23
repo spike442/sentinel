@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/name: stonks
+{{ include "stonks.standardLabels" . | indent 4 }}
+  name: stonks-config
+  namespace: {{ .Release.Namespace }}
+data:
+{{- include "stonks.configFiles" . | nindent 2 }}
