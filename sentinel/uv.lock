@@ -2220,7 +2220,7 @@ wheels = [
 
 [[package]]
 name = "sentinel"
-version = "1.0.1"
+version = "1.0.2"
 source = { virtual = "." }
 
 [package.dev-dependencies]
@@ -2239,7 +2239,7 @@ dev = [
 
 [[package]]
 name = "sentinel-agents"
-version = "1.0.1"
+version = "1.0.2"
 source = { editable = "agents" }
 dependencies = [
     { name = "langchain" },
@@ -2271,7 +2271,7 @@ provides-extras = ["sre", "dividends"]
 
 [[package]]
 name = "sentinel-api"
-version = "1.0.1"
+version = "1.0.2"
 source = { editable = "console/api" }
 dependencies = [
     { name = "fastapi" },
@@ -2288,7 +2288,7 @@ requires-dist = [
 
 [[package]]
 name = "sentinel-core"
-version = "1.0.1"
+version = "1.0.2"
 source = { editable = "core" }
 dependencies = [
     { name = "pydantic" },
@@ -2334,7 +2334,7 @@ provides-extras = ["knowledge-client", "database", "kafka", "github", "metrics",
 
 [[package]]
 name = "sentinel-executor"
-version = "1.0.1"
+version = "1.0.2"
 source = { editable = "executor" }
 dependencies = [
     { name = "httpx" },
@@ -2349,7 +2349,7 @@ requires-dist = [
 
 [[package]]
 name = "sentinel-knowledge"
-version = "1.0.1"
+version = "1.0.2"
 source = { editable = "knowledge" }
 dependencies = [
     { name = "boto3" },
@@ -2376,7 +2376,7 @@ requires-dist = [
 
 [[package]]
 name = "sentinel-sre"
-version = "1.0.1"
+version = "1.0.2"
 source = { editable = "sre" }
 dependencies = [
     { name = "sentinel-agents", extra = ["sre"] },
@@ -2391,7 +2391,7 @@ requires-dist = [
 
 [[package]]
 name = "sentinel-workflow"
-version = "1.0.1"
+version = "1.0.2"
 source = { editable = "workflow" }
 dependencies = [
     { name = "sentinel-core", extra = ["database", "github", "kafka", "knowledge-client", "metrics"] },
@@ -2505,7 +2505,7 @@ wheels = [
 
 [[package]]
 name = "stonks-api"
-version = "1.0.1"
+version = "1.0.2"
 source = { editable = "stonks/api" }
 dependencies = [
     { name = "fastapi" },
@@ -2526,7 +2526,7 @@ requires-dist = [
 
 [[package]]
 name = "stonks-core"
-version = "1.0.1"
+version = "1.0.2"
 source = { editable = "stonks/core" }
 dependencies = [
     { name = "boto3" },
@@ -2545,7 +2545,7 @@ requires-dist = [
 
 [[package]]
 name = "stonks-dividends"
-version = "1.0.1"
+version = "1.0.2"
 source = { editable = "stonks/dividends" }
 dependencies = [
     { name = "exchange-calendars" },
@@ -2574,7 +2574,7 @@ requires-dist = [
 
 [[package]]
 name = "stonks-ingest"
-version = "1.0.1"
+version = "1.0.2"
 source = { editable = "stonks/ingest" }
 dependencies = [
     { name = "httpx" },
@@ -2595,7 +2595,7 @@ requires-dist = [
 
 [[package]]
 name = "stonks-spark"
-version = "1.0.1"
+version = "1.0.2"
 source = { editable = "stonks/spark" }
 dependencies = [
     { name = "pyyaml" },
